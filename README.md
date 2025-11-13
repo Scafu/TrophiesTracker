@@ -1,3 +1,3 @@
 # TrophiesTracker
 
-<img src= "lib/assets/output-onlinepngtools.png" width = 30%/>
+<img src= "lib/assets/output-onlinepngtools.png" width = 25%/>
