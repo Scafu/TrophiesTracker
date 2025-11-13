@@ -1,3 +1,3 @@
 # TrophiesTracker
 
-![logo dell'app](lib/assets/output-onlinepngtools.png)
+<img src= "lib/assets/output-onlinepngtools.png" width = 30%/>
