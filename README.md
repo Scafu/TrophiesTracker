@@ -23,25 +23,28 @@ git clone https://github.com/Scafu/TrophiesTracker
 - :bar_chart: See your stats in the stats page
 - :iphone: Made for mobile phones tested only on Android (I don't have an emulator for Apple)
 
-## Installation
+## Installation from Source
 1. Clone the repository or download the Source Code from the release section.
 2. To be able to build the app correctly you will need a *Steam API Key* that you can create at this URL *https://steamcommunity.com/dev*
-2. To run the app locally write down the following code:
+2. To run the app locally write the following code:
 ```bash
 flutter doctor -v
 flutter pub get
-flutter run --dart-define=STEAM_API_KEY={YOUR_API_KEY}
 ```
-3. To build the app in release mode, you will have to write this instead:
+- And after creating a .env file with the Key inside
+```bash
+flutter run --dart-define-from-file=STEAM_API_KEY={YOUR_FILE}.env
+```
+4. To build the app in release mode, you will have to write this instead:
 - For Android:
 ```bash
-flutter build apk --release --dart-define=STEAM_API_KEY{YOUR_API_KEY}
+flutter build apk --release --dart-define-from-file=STEAM_API_KEY={YOUR_FILE}.env
 ```
 - For Apple:
 ```bash
-flutter build appbundle --release --dart-define=STEAM_API_KEY{YOUR_API_KEY}
+flutter build appbundle --release --dart-define-from-file=STEAM_API_KEY={YOUR_FILE}.env
 ```
-4. I know It's not the best to include the API_KEY inside the APK, i don't have a server to make API call with, if you have any advice feel free, to tell me.
+5. I know It's not the best to include the API_KEY inside the APK, i don't have a server to make API call with, if you have any advice feel free to tell me.
 
 ## Something about the APP
 The codebase is made using AI, but is published after i've learned all the things, and has been refacted by myself.  
