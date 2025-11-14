@@ -1,0 +1,36 @@
+# Flutter / Dart build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+*.apk
+*.aab
+*.dill
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# iOS
+ios/Pods/
+ios/*.xcworkspace
+ios/.symlinks/
+ios/Flutter/Flutter.podspec
+*.xcworkspace
+*.xcuserstate
+
+# Android
+android/.gradle/
+
+# Files sensibili
+*.keystore
+*.jks
+*.p12
+*.env
+
+# Logs
+/logs/
+

@@ -1,0 +1,7 @@
+{
+  "displayName": "Mastery Trophy",
+  "description": "Hai ottenuto tutti i trofei del gioco",
+  "isAchieved": 0,
+  "coloredIcon": "lib/assets/trophy_100.png",
+  "uncoloredIcon": "lib/assets/trophy_100_gray.png"
+}
