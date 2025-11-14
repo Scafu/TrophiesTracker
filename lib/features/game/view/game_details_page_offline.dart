@@ -436,7 +436,7 @@ class GameDetailsPageOffline extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Colors.amber,
-                                    width: 3,
+                                    width: 2,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
@@ -459,14 +459,18 @@ class GameDetailsPageOffline extends ConsumerWidget {
                                   title: Text(
                                     trophy.displayName,
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyLarge?.color,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   subtitle: Text(
                                     trophy.description ?? '',
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -476,6 +480,9 @@ class GameDetailsPageOffline extends ConsumerWidget {
                           )
                         : ListTile(
                             shape: RoundedRectangleBorder(
+                              side: BorderSide(
+                                color: Theme.of(context).dividerColor,
+                              ),
                               borderRadius: BorderRadiusGeometry.circular(12),
                             ),
                             tileColor: Theme.of(

@@ -315,85 +315,68 @@ class GameDetailsPage extends ConsumerWidget {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {},
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
+                      child: ListTile(
+                        tileColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHigh,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
                             color: Theme.of(context).dividerColor,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                          borderRadius: BorderRadiusGeometry.circular(12),
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadiusGeometry.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            leading: trophy.coloredIcon!.startsWith('http')
-                                ? CachedNetworkImage(
-                                    filterQuality: FilterQuality.high,
-                                    imageUrl: trophy.coloredIcon ?? '',
-                                    placeholder: (context, url) => CircleAvatar(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        leading: trophy.coloredIcon!.startsWith('http')
+                            ? CachedNetworkImage(
+                                filterQuality: FilterQuality.high,
+                                imageUrl: trophy.coloredIcon ?? '',
+                                placeholder: (context, url) => CircleAvatar(
+                                  backgroundColor: Themes
+                                      .darkTheme
+                                      .colorScheme
+                                      .surfaceContainerHigh,
+                                  radius: screenSize.width * 0.05,
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    CircleAvatar(
                                       backgroundColor: Themes
                                           .darkTheme
                                           .colorScheme
                                           .surfaceContainerHigh,
                                       radius: screenSize.width * 0.05,
+                                      child: Icon(
+                                        Icons.error_outline,
+                                        size: 20,
+                                        color: Themes
+                                            .darkTheme
+                                            .textTheme
+                                            .bodySmall
+                                            ?.color,
+                                      ),
                                     ),
-                                    errorWidget: (context, url, error) =>
-                                        CircleAvatar(
-                                          backgroundColor: Themes
-                                              .darkTheme
-                                              .colorScheme
-                                              .surfaceContainerHigh,
-                                          radius: screenSize.width * 0.05,
-                                          child: Icon(
-                                            Icons.error_outline,
-                                            size: 20,
-                                            color: Themes
-                                                .darkTheme
-                                                .textTheme
-                                                .bodySmall
-                                                ?.color,
-                                          ),
-                                        ),
-                                    width: screenSize.width * 0.13,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.asset(
-                                    trophy.coloredIcon!,
-                                    width: screenSize.width * 0.13,
-                                    fit: BoxFit.cover,
-                                  ),
-                            title: Text(
-                              trophy.displayName,
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                                fontWeight: FontWeight.w500,
+                                width: screenSize.width * 0.13,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.asset(
+                                trophy.coloredIcon!,
+                                width: screenSize.width * 0.13,
+                                fit: BoxFit.cover,
                               ),
-                            ),
-                            subtitle: Text(
-                              trophy.description ?? '',
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.color,
-                                fontSize: 12,
-                              ),
-                            ),
+                        title: Text(
+                          trophy.displayName,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(
+                          trophy.description ?? '',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                            fontSize: 12,
                           ),
                         ),
                       ),

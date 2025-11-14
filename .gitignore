@@ -16,8 +16,11 @@ pubspec.lock
 
 # iOS
 ios/Pods/
+ios/*.xcworkspace
 ios/.symlinks/
 ios/Flutter/Flutter.podspec
+*.xcworkspace
+*.xcuserstate
 
 # Android
 android/.gradle/

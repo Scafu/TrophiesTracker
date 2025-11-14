@@ -35,7 +35,7 @@ class CustomNavigationBar extends ConsumerWidget {
         ),
       ),
       child: NavigationBar(
-        indicatorColor: Theme.of(context).colorScheme.secondaryContainer,
+        indicatorColor: Theme.of(context).colorScheme.primary,
         elevation: 2.0,
         selectedIndex: activeScreen.index,
         onDestinationSelected: (index) {
