@@ -6,15 +6,13 @@
 
 # Track your trophies locally, using only your phone
 
-<p align="center">
+<p align="center" text-decoration="none">
   <a href="https://flutter.dev" style="text-decoration:none;">
     <img src="https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue" alt="Flutter">
   </a>
-  &nbsp;
   <a href="https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE" style="text-decoration:none;">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   </a>
-  &nbsp;
   <a href="https://codemagic.io/apps/6918531c322d670e8c8900c7" style="text-decoration:none;">
     <img src="https://api.codemagic.io/apps/6918531c322d670e8c8900c7/6918531c322d670e8c8900c6/status_badge.svg" alt="Build Status">
   </a>
