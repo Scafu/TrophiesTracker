@@ -1,13 +1,14 @@
 # TrophiesTracker
 
 <p align="center">
-  <img src= "lib/assets/output-onlinepngtools.png" width = 25%/>
+  <img src="lib/assets/output-onlinepngtools.png" width=25%/>
 </p>
 
-# Track your trophies locally, using just your phone
+# Track your trophies locally, using only your phone
+
 <p align="center">
   <a href="https://flutter.dev">
-    <img src="https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=white" alt="Flutter">
+    <img src="https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue" alt="Flutter">
   </a>
   <a href="https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -25,41 +26,44 @@ git clone https://github.com/Scafu/TrophiesTracker
 
 ## Features
 
-- :video_game: Search any game from a local database (Steam only for now)
+- :video_game: Search for any game in a local database (currently Steam only)
 
 - :trophy: Add games to your collection and start tracking your trophies
 
 - :bar_chart: View your stats in the stats page
 
-- :iphone: Made for mobile phones — tested only on Android (I don't have an iOS emulator)
+- :iphone: Designed for mobile phones — currently tested only on Android (iOS not tested)
 
 ## Installation from Source
+
 1. Clone the repository or download the Source Code from the Release section.
-2. To build the app correctly you need a *Steam API Key* which you can create at this URL: *https://steamcommunity.com/dev*
-3. To run the app locally, run:
+2. To run the app locally, write:
+
 ```bash
 flutter doctor -v
 flutter pub get
+flutter run
 ```
-4.  after creating a .json file with the Key inside
-```bash
-flutter run --dart-define-from-file={YOUR_FILE}.json
-```
-5. To build the app in release mode, use:
+
+3. To build the app in release mode, use:
+
 - Android:
+
 ```bash
-flutter build apk --release --dart-define-from-file={YOUR_FILE}.json
+flutter build apk --release
 ```
+
 - Apple:
+
 ```bash
-flutter build appbundle --release --dart-define-from-file={YOUR_FILE}.json
+flutter build ipa --release
 ```
-5. For security reasons I will not publish the APK or IPA until I have a server handling API calls. Until then, you will need to build the app from source. Sorry for the inconvenience.
 
 ## Something about the APP
+
 The codebase was checked using AI for bug detection but was published only after I learned everything and refactored and corrected it myself.
-Currently, I'm waiting for Serverpod Cloud to allow redirect calls from OpenID to the app.  
-LLM used in this project are:
+Currently, the backend proxy for searching methods are hosted on cloudflare, in the future i will try different host.
+
 - ChatGPT v5
 - Gemini Pro v2.5
 - DeepSeek 70b
@@ -67,17 +71,15 @@ LLM used in this project are:
 For Design and color, I used **StitchIO**: https://stitch.withgoogle.com
 
 ## Technologies
+
 - **Riverpod**: as a state manager
 - **SQFlite**: for the local database
-- **Serverpod**: for backend calls (currently in develop)
+- **Cloudflare**: Proxy for backend calls
 
 ## Things i want to add
+
 - Steam authentication and retrieval of user trophy stats from the API, and merging them with local data
 
 - API integration for other platforms such as Ubisoft and Epic Games
 
 - Possibly adding an LLM to ask for game advice (unlikely to happen)
-  
-
-
-

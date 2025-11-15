@@ -7,7 +7,6 @@ import 'package:trophies_app_tracker/core/models/game/game_summary.dart';
 import 'package:trophies_app_tracker/core/models/trophy/trophy.dart';
 
 class JsonService {
-  static const apiKey = String.fromEnvironment('STEAM_API_KEY');
   final Dio _dio = Dio(BaseOptions(connectTimeout: Duration(seconds: 5)));
   Future<List<GameSummary>> fetchFromLocalDatabase() async {
     try {
@@ -44,8 +43,8 @@ class JsonService {
           "https://cdn.akamai.steamstatic.com/steam/apps/$appId/library_600x900.jpg";
 
       final jsonString2 = await _dio.get(
-        "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?",
-        queryParameters: {"key": apiKey, "appid": appId},
+        "https://trophiestracker.alessandro-mazzariol04.workers.dev",
+        queryParameters: {"appid": appId},
       );
 
       final trophyList =
