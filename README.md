@@ -9,11 +9,9 @@
 <p align="center">
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue" alt="Flutter">
-  </a>
-  <a href="https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE">
+  </a><a href="https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  </a>
-  <a href="https://codemagic.io/apps/6918531c322d670e8c8900c7">
+  </a><a href="https://codemagic.io/apps/6918531c322d670e8c8900c7">
     <img src="https://api.codemagic.io/apps/6918531c322d670e8c8900c7/6918531c322d670e8c8900c6/status_badge.svg" alt="Build Status">
   </a>
 </p>
