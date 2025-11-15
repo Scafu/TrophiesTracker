@@ -13,6 +13,9 @@
   <a href="https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   </a>
+  <a href="https://codemagic.io/apps/6918531c322d670e8c8900c7">
+    <img src="https://api.codemagic.io/apps/6918531c322d670e8c8900c7/6918531c322d670e8c8900c6/status_badge.svg" alt="Build Status">
+  </a>
 </p>
 <p> 
   This is a Flutter app made for learning purposes. While using this app you might find bugs or visual issues; if so, please create an issue and I will try to resolve it ASAP.
