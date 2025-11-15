@@ -6,7 +6,7 @@
 
 # Track your trophies locally, using only your phone
 
-<p align="center" text-decoration="none">
+<p align="center">
   <a href="https://flutter.dev" style="text-decoration:none;">
     <img src="https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue" alt="Flutter">
   </a>
