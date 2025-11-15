@@ -6,9 +6,10 @@
 
 # Track your trophies locally, using only your phone
 
-<p align="center">
-[![Flutter](https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue)](https://flutter.dev)[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE)[![Build Status](https://api.codemagic.io/apps/6918531c322d670e8c8900c7/6918531c322d670e8c8900c6/status_badge.svg)](https://codemagic.io/apps/6918531c322d670e8c8900c7)
-</p>
+[![Flutter](https://img.shields.io/badge/flutter-3.35-blue?logo=flutter&logoColor=blue)](https://flutter.dev)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Scafu/TrophiesTracker/blob/main/LICENSE)
+[![Build Status](https://api.codemagic.io/apps/6918531c322d670e8c8900c7/6918531c322d670e8c8900c6/status_badge.svg)](https://codemagic.io/apps/6918531c322d670e8c8900c7)
+
 
 <p> 
   This is a Flutter app made for learning purposes. While using this app you might find bugs or visual issues; if so, please create an issue and I will try to resolve it ASAP.
