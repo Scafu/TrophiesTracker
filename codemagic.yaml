@@ -1,0 +1,48 @@
+workflows:
+  steam_only_build:
+    name: Trophies Tracker
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUILD_NUMBER: 1
+      android_signing:
+        - keystore_reference: CM_KEYSTORE
+          keystore_password: ENCRYPTED[CM_KEYSTORE_PASSWORD]
+          key_alias: ENCRYPTED[CM_KEY_ALIAS]
+          key_password: ENCRYPTED[CM_KEY_PASSWORD]
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Get dependencies
+        script: |
+          flutter pub get
+      - name: Analyze project
+        script: |
+          flutter analyze
+      - name: Build APK
+        script: |
+          flutter build apk --release
+      - name: Build AppBundle
+        script: |
+          flutter build appbundle --release
+      - name: Build iOS
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/app-release.aab
+      - build/ios/iphoneos/*.app
+    publishing:
+      github:
+        artifact_level: true   
+        draft: false           
+        prerelease: false    
+        tag_name: v${BUILD_NUMBER}
