@@ -42,7 +42,6 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
     return _getUserInfo(url, token);
   }
 
-  @override
   Future<SteamUserModel> _getUserInfo(Uri url, String token) async {
     try {
       final response = await client.get(
