@@ -8,11 +8,7 @@ workflows:
       cocoapods: default
       vars:
         BUILD_NUMBER: 1
-      android_signing:
-        - keystore: CM_KEYSTORE
-          keystore_password: ENCRYPTED[CM_KEYSTORE_PASSWORD]
-          key_alias: ENCRYPTED[CM_KEY_ALIAS]
-          key_password: ENCRYPTED[CM_KEY_PASSWORD]
+        GITHUB_TOKEN: ENCRYPTED[GITHUB_TOKEN]
     triggering:
       events:
         - push
@@ -36,13 +32,24 @@ workflows:
       - name: Build iOS
         script: |
           flutter build ios --release --no-codesign
+      - name: Publish to GitHub
+        script: | 
+          #!/usr/bin/env zsh
+
+          # Publish only for tag builds
+          if [ -z ${CM_TAG} ]; then
+            echo "Not a tag build, will not publish GitHub release"
+            exit 0
+          fi
+
+          gh release create "${CM_TAG}" \
+            --title "<TrophiesTracker> ${CM_TAG}" \
+            --notes-file changelog.md \
+            path/to/build-artifact.ipa \
+            path/to/build-artifact.apk
+            
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
       - build/ios/iphoneos/*.app
-    publishing:
-      github:
-        artifact_level: true   
-        draft: false           
-        prerelease: false    
-        tag_name: v${BUILD_NUMBER}
+      
