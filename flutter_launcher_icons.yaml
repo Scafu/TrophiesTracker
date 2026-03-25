@@ -4,8 +4,6 @@ flutter_launcher_icons:
   adaptive_icon_background: "#0E0E12"
   adaptive_icon_foreground: "assets/icon_foreground.png"
 
-  # Questo parametro restringe l'immagine del foreground.
-  # Più alto è il numero, più piccolo diventa il trofeo. Prova con 16 o 20.
   adaptive_icon_foreground_inset: 20
-
+  remove_alpha_ios: true
   ios: true

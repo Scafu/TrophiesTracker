@@ -168,7 +168,7 @@ class _AccountPageState extends State<AccountPage> {
                         title: 'Privacy Policy',
                         onTap: () => launchUrl(
                           Uri.parse(
-                            'https://trophiestracker.alessandro-mazzariol04.workers.dev/privacy-policy',
+                            'https://trophiestracker.alessandro-mazzariol04.workers.dev/policy',
                           ),
                         ),
                       ),

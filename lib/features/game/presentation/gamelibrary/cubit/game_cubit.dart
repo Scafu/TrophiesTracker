@@ -8,9 +8,8 @@ import 'package:trophies_tracker/features/game/domain/entities/game.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_state.dart';
 
-/// Manages the reactive state of the game library.
+/// Manages the reactive state of the game library and synchronization with external services.
 class GameCubit extends Cubit<GameState> {
-  /// The repository handling game data operations.
   final GameRepository repository;
   final AccountRepository accountRepository;
   final Logger _logger;
@@ -18,7 +17,6 @@ class GameCubit extends Cubit<GameState> {
 
   StreamSubscription<List<Game>>? _librarySubscription;
 
-  /// Creates a new [GameCubit].
   GameCubit(
     this.repository,
     this.accountRepository,
@@ -26,17 +24,10 @@ class GameCubit extends Cubit<GameState> {
     this._rateRequestLimiter,
   ) : super(const GameState.initial());
 
-  /// Subscribes to the local database stream to reactively update the UI.
   void watchGames() {
-    _logger.i("Subscribing to game library stream...");
-
     _librarySubscription?.cancel();
-
     _librarySubscription = repository.watchLibrary().listen(
-      (games) {
-        _logger.i("Stream updated: Loaded ${games.length} games");
-        emit(GameState.loaded(games: games));
-      },
+      (games) => emit(GameState.loaded(games: games)),
       onError: (error, stackTrace) {
         _logger.e(
           "Error in game library stream: $error",
@@ -47,17 +38,17 @@ class GameCubit extends Cubit<GameState> {
     );
   }
 
+  /// Fetches games from Steam using the stored token.
   Future<void> fetchGamesFromSteamAccount() async {
-    final key = 'fetchGamesFromSteamAccount';
-
+    const key = 'fetch_steam_games';
     if (!_rateRequestLimiter.isAllowed(key, const Duration(minutes: 5))) {
-      emit(GameState.error('429'));
+      emit(const GameState.error('429'));
       return;
     }
 
     final token = await accountRepository.getToken();
     if (token == null) {
-      emit(const GameState.error('No token found. Please login.'));
+      emit(const GameState.error('No Steam token found.'));
       return;
     }
 
@@ -66,20 +57,24 @@ class GameCubit extends Cubit<GameState> {
 
     try {
       await repository.fetchGamesFromSteamAccount(token);
-      _logger.i("Fetch from Steam successful");
       watchGames();
-    } catch (error, stackTrace) {
-      _logger.e(
-        "Error fetching games from Steam: $error",
-        stackTrace: stackTrace,
-      );
-      if (!isClosed) emit(GameState.error(error.toString()));
+    } catch (e) {
+      emit(GameState.error(e.toString()));
+    }
+  }
+
+  /// Clears synced games from the library.
+  /// Usually called when the user logs out.
+  Future<void> clearSyncedGames() async {
+    try {
+      await repository.deleteGamesBySource('steam', onlySynced: true);
+    } catch (e) {
+      _logger.e("Error clearing games: $e");
     }
   }
 
   @override
   Future<void> close() {
-    _logger.i("Closing GameCubit and cancelling stream subscription.");
     _librarySubscription?.cancel();
     return super.close();
   }

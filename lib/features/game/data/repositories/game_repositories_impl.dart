@@ -41,25 +41,37 @@ class GameRepositoriesImpl implements GameRepository {
   @override
   Future<void> syncSteamCatalog() async {
     final isDbEmpty = await localDataSource.isCatalogEmpty();
-
-    // Abort if the database is already populated to avoid redundant downloads
     if (!isDbEmpty) {
       logger.i("Steam catalog already exists in local database.");
       return;
     }
 
-    logger.i("Starting Steam catalog synchronization...");
-    try {
-      final catalogChunks = await remoteDataSource.fetchSteamCatalogOnline();
-      logger.i(
-        "Fetched ${catalogChunks.length} games from remote Steam catalog.",
-      );
-      await localDataSource.saveSteamCatalogToDb(catalogChunks);
-      logger.i("Steam catalog successfully saved to local database.");
-    } catch (e) {
-      logger.e("Failed to synchronize the initial Steam catalog: $e");
-      throw Exception('Failed to synchronize the initial Steam catalog: $e');
-    }
+    logger.i("Starting partial Steam catalog sync...");
+
+    final partial = await remoteDataSource.fetchSteamCatalogOnline(
+      maxChunks: 8,
+      startFromAppId: 0,
+    );
+    await localDataSource.saveSteamCatalogToDb(partial.apps);
+    logger.i("Partial catalog saved (${partial.apps.length} games).");
+
+    if (!partial.hasMore) return;
+
+    _syncRemainingCatalog(partial.lastAppId);
+  }
+
+  void _syncRemainingCatalog(int fromAppId) {
+    remoteDataSource
+        .fetchSteamCatalogOnline(startFromAppId: fromAppId)
+        .then((result) async {
+          await localDataSource.saveSteamCatalogToDb(result.apps);
+          logger.i(
+            "Background catalog sync complete (${result.apps.length} more games).",
+          );
+        })
+        .catchError((e) {
+          logger.e("Background catalog sync failed: $e");
+        });
   }
 
   /// Saves a single [Game] entity to the local database.

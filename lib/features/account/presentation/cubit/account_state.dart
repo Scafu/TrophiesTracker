@@ -1,10 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
 import 'package:trophies_tracker/features/account/domain/entities/steam_user.dart';
 
 part 'account_state.freezed.dart';
 
 /// Represents the various states of the account authentication process.
+/// Supporta solo Steam.
 @freezed
 class AccountState with _$AccountState {
   /// The initial state before any authentication check has occurred.
@@ -13,7 +13,7 @@ class AccountState with _$AccountState {
   /// The state when authentication or user data fetching is in progress.
   const factory AccountState.loading() = _Loading;
 
-  /// The state when a user is successfully authenticated.
+  /// The state when a user is successfully authenticated (Steam).
   const factory AccountState.authenticated(SteamUser user) = _Authenticated;
 
   /// The state when no user is currently authenticated.

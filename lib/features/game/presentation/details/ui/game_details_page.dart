@@ -30,11 +30,25 @@ class GameDetailsPage extends StatefulWidget {
 
 class _GameDetailsPageState extends State<GameDetailsPage> {
   GameDetailsLoaded? _lastLoadedState;
+  late bool _fromExplore;
+
+  @override
+  void initState() {
+    super.initState();
+    _fromExplore = widget.fromExplore;
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<GameDetailsCubit, GameDetailsState>(
       listener: (BuildContext context, GameDetailsState state) {
+        if (state is GameDetailsLoaded &&
+            state.game.addedAt != null &&
+            _fromExplore) {
+          setState(() {
+            _fromExplore = false;
+          });
+        }
         if (state is GameDetailsError) {
           final message = state.message.contains('429')
               ? 'Too many requests. Please try again later.'
@@ -71,7 +85,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
               : false;
 
           return Scaffold(
-            appBar: _buildAppBar(context, game, isSyncing, widget.fromExplore),
+            appBar: _buildAppBar(context, game, isSyncing, _fromExplore),
             body: CustomScrollView(
               slivers: <Widget>[
                 SliverToBoxAdapter(
@@ -88,7 +102,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                       (BuildContext context, int index) => TrophyTile(
                         game: game,
                         trophy: game.trophies[index],
-                        fromExplorer: widget.fromExplore,
+                        fromExplorer: _fromExplore,
                       ),
                       childCount: game.trophies.length,
                     ),

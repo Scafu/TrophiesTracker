@@ -8,9 +8,11 @@ import 'package:trophies_tracker/features/game/data/models/trophy_model.dart';
 
 abstract class GameRemoteDataSource {
   Future<List<GameModel>> searchGamesOnline(String platform, String query);
-  Future<List<Map<String, dynamic>>> fetchSteamCatalogOnline();
+  Future<({List<Map<String, dynamic>> apps, int lastAppId, bool hasMore})>
+  fetchSteamCatalogOnline({int maxChunks, int startFromAppId});
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token);
   Future<GameModel> getGameByIdRemote(int appId, {String? token});
+
 }
 
 List<Map<String, dynamic>> _parseSteamCatalogChunk(String responseBody) {
@@ -34,6 +36,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
   final String proxyBaseUrl;
 
   GameRemoteDataSourceImpl({required this.client, required this.proxyBaseUrl});
+
 
   @override
   Future<List<GameModel>> searchGamesOnline(
@@ -75,38 +78,36 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> fetchSteamCatalogOnline() async {
-    int currentLastAppId = 0;
+  Future<({List<Map<String, dynamic>> apps, int lastAppId, bool hasMore})>
+  fetchSteamCatalogOnline({int? maxChunks, int startFromAppId = 0}) async {
+    int currentLastAppId = startFromAppId;
     bool hasMore = true;
     final List<Map<String, dynamic>> allApps = [];
+    int chunkCount = 0;
 
     while (hasMore) {
+      if (maxChunks != null && chunkCount >= maxChunks) break;
+
       final url = Uri.parse(
         '$proxyBaseUrl/catalog?last_appid=$currentLastAppId',
       );
-
       final response = await client.get(url);
 
       if (response.statusCode == 200) {
         final chunk = await compute(_parseSteamCatalogChunk, response.body);
-
         allApps.addAll(chunk);
+        chunkCount++;
 
         final decoded = json.decode(response.body);
         final responseData = decoded['response'];
-
         hasMore = responseData['have_more_results'] ?? false;
-        if (hasMore) {
-          currentLastAppId = responseData['last_appid'];
-        }
+        if (hasMore) currentLastAppId = responseData['last_appid'];
       } else {
-        throw Exception(
-          'Failed to download Steam catalog chunk: HTTP ${response.statusCode}',
-        );
+        throw Exception('HTTP ${response.statusCode}');
       }
     }
 
-    return allApps;
+    return (apps: allApps, lastAppId: currentLastAppId, hasMore: hasMore);
   }
 
   @override

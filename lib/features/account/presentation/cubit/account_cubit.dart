@@ -78,8 +78,7 @@ class AccountCubit extends Cubit<AccountState> {
     emit(const AccountState.loading());
     try {
       await repository.logout();
-      // Clear only synced steam games from the local library upon logout
-      // Games added manually from explorer will remain.
+
       await gameRepository.deleteGamesBySource('steam', onlySynced: true);
 
       if (!isClosed) {
