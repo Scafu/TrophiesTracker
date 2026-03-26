@@ -22,10 +22,25 @@ if (keystorePropertiesFile.exists()) {
 android {
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+            val isCI = System.getenv()["CI"] == "true"
+            if (isCI) {
+                val storeFilePath = System.getenv()["CM_KEYSTORE_PATH"]
+                val storePasswordEnv = System.getenv()["CM_KEYSTORE_PASSWORD"]
+                val keyAliasEnv = System.getenv()["CM_KEY_ALIAS"]
+                val keyPasswordEnv = System.getenv()["CM_KEY_PASSWORD"]
+                if (storeFilePath.isNullOrBlank() || storePasswordEnv.isNullOrBlank() || keyAliasEnv.isNullOrBlank() || keyPasswordEnv.isNullOrBlank()) {
+                    throw GradleException("Codemagic signing environment variables are missing!")
+                }
+                storeFile = file(storeFilePath)
+                storePassword = storePasswordEnv
+                keyAlias = keyAliasEnv
+                keyPassword = keyPasswordEnv
+            } else {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
