@@ -1,0 +1,19 @@
+{
+  "name": "trophiestracker",
+  "main": "src/index.js",
+  "compatibility_date": "2025-11-15",
+  "kv_namespaces": [
+    { "binding": "KV", "id": "fe959c0d3b1a4fc8b3256f2c1d902313" }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    }
+  }
+}
