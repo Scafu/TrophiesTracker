@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -25,16 +26,14 @@ class AppRouter {
     initialLocation: '/splash',
     redirect: (BuildContext context, GoRouterState state) {
       final Uri uri = state.uri;
-      if (uri.scheme == 'trophiestracker' && uri.host == 'stats') {
-        final String? token = uri.queryParameters['token'];
-        if (token != null) {
-          return '/accounts?sync=true&token=$token';
-        }
+      final isCustomSchemeCallback =
+          uri.scheme == 'trophiestracker' && uri.host == 'stats';
+      if (isCustomSchemeCallback || uri.path == '/open') {
         return '/accounts?sync=true';
       }
       return null;
     },
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     errorBuilder: (BuildContext context, GoRouterState state) =>
         Scaffold(body: Center(child: Text('Page not found: ${state.uri}'))),
     routes: <RouteBase>[

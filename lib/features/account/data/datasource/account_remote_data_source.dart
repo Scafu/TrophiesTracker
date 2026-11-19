@@ -5,15 +5,19 @@ import 'package:trophies_tracker/features/account/data/models/steam_user_model.d
 
 /// Interface for remote account data operations.
 abstract class AccountRemoteDataSource {
-  /// Returns the URL for Steam authentication.
-  String getSteamLoginUrl();
+  /// Returns the URL that starts the Steam login, carrying the PKCE
+  /// [challenge].
+  String getSteamLoginUrl(String challenge);
 
-  /// Returns the URL for PSN authentication.
+  /// Exchanges the one-time [code] from the login callback for a session
+  /// token, proving possession of the PKCE [verifier].
+  Future<String> exchangeCode(String code, String verifier);
 
   /// Fetches Steam user information by token.
   Future<SteamUserModel> getSteamUserInfo(String token);
 
-  /// Fetches PSN user information by token.
+  /// Revokes the session [token] on the server.
+  Future<void> revokeToken(String token);
 }
 
 /// Implementation of [AccountRemoteDataSource] using HTTP.
@@ -31,15 +35,38 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
   });
 
   @override
-  String getSteamLoginUrl() {
-    return '$proxyBaseUrl/auth/steam';
+  String getSteamLoginUrl(String challenge) {
+    return Uri.parse(
+      '$proxyBaseUrl/auth/steam',
+    ).replace(queryParameters: {'challenge': challenge}).toString();
   }
 
   @override
+  Future<String> exchangeCode(String code, String verifier) async {
+    final response = await client.post(
+      Uri.parse('$proxyBaseUrl/auth/token'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'code': code, 'verifier': verifier}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('HTTP Error ${response.statusCode}: ${response.body}');
+    }
+    final data = json.decode(response.body) as Map<String, dynamic>;
+    return data['token'] as String;
+  }
+
   @override
   Future<SteamUserModel> getSteamUserInfo(String token) async {
-    final url = Uri.parse('$proxyBaseUrl/user?token=$token');
-    return _getUserInfo(url, token);
+    return _getUserInfo(Uri.parse('$proxyBaseUrl/user'), token);
+  }
+
+  @override
+  Future<void> revokeToken(String token) async {
+    await client.post(
+      Uri.parse('$proxyBaseUrl/logout'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
   }
 
   Future<SteamUserModel> _getUserInfo(Uri url, String token) async {
@@ -49,6 +76,7 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 

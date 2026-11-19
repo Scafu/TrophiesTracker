@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,8 +57,13 @@ Future<void> init() async {
   );
 
   // Account Feature
+  sl.registerLazySingleton(() => const FlutterSecureStorage());
+
   sl.registerLazySingleton<AccountLocalDataSource>(
-    () => AccountLocalDataSourceImpl(sharedPreferences: sl()),
+    () => AccountLocalDataSourceImpl(
+      sharedPreferences: sl(),
+      secureStorage: sl(),
+    ),
   );
 
   sl.registerLazySingleton<AccountRemoteDataSource>(
