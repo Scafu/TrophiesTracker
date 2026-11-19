@@ -1,4 +1,3 @@
-import 'package:rxdart/rxdart.dart';
 import 'package:trophies_tracker/core/services/log.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_local_data_source.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_source.dart';
@@ -121,18 +120,18 @@ class GameRepositoriesImpl implements GameRepository {
     );
   }
 
-  late final Stream<List<Game>> _library = localDataSource
-      .watchLibrary()
-      .map((gameModels) => gameModels.map((m) => m.toEntity()).toList())
-      .shareValue();
-
   /// Returns a reactive stream of the user's game library.
   ///
   /// Emits a new list of [Game] entities whenever the underlying local data
-  /// changes. All listeners share one database query, and a new listener
-  /// starts with the latest library.
+  /// changes. Each listener gets its own subscription: a shared stream
+  /// (`shareValue`) went stale once every listener had cancelled, so the
+  /// library stayed empty after the cubit resubscribed following a sync.
   @override
-  Stream<List<Game>> watchLibrary() => _library;
+  Stream<List<Game>> watchLibrary() {
+    return localDataSource.watchLibrary().map((gameModels) {
+      return gameModels.map((gameModel) => gameModel.toEntity()).toList();
+    });
+  }
 
   /// Converts a [Game] entity into a [GameModel] for local data operations.
   GameModel _mapToModel(Game game) {
