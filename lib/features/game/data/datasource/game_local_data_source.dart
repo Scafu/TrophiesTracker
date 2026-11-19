@@ -15,8 +15,8 @@ abstract class GameLocalDataSource {
   Future<GameModel?> getGameByIdLocal(int appId);
   Future<void> updateStateTrophy(int appId, String trophyName, bool status);
   Stream<List<GameModel>> watchLibrary();
-  Future<List<GameModel>> searchInLocalCatalog(String query);
-  Future<bool> isCatalogEmpty();
+  Future<List<GameModel>> searchInLocalCatalog(String query, {int limit});
+  Future<int> getLastCatalogAppId();
   Future<void> saveSteamCatalogToDb(List<Map<String, dynamic>> apps);
 }
 
@@ -134,56 +134,46 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     await (db.delete(db.games)..where((t) => t.appId.equals(appId))).go();
   }
 
+  /// Emits the whole library whenever games or trophies change.
+  ///
+  /// A single invalidation stream covers both tables, so a write that touches
+  /// them both (a save, a sync) gives one consistent emission, and a newer
+  /// change cancels a read that is still in flight.
   @override
   Stream<List<GameModel>> watchLibrary() {
-    final gamesStream = db.select(db.games).watch();
-    final trophiesStream = db.select(db.trophies).watch();
-
-    return Rx.combineLatest2<List<Game>, List<Trophy>, List<GameModel>>(
-      gamesStream,
-      trophiesStream,
-      (gamesData, trophiesData) {
-        final Map<int, List<TrophyModel>> trophiesMap = {};
-        for (final t in trophiesData) {
-          trophiesMap
-              .putIfAbsent(t.gameId, () => [])
-              .add(
-                TrophyModel(
-                  apiName: t.apiName,
-                  displayName: t.displayName,
-                  description: t.description,
-                  icon: t.icon,
-                  coloredIcon: t.coloredIcon,
-                  isAchieved: t.isAchieved,
-                  achievedAt: t.achievedAt,
-                ),
-              );
-        }
-
-        return gamesData.map((g) {
-          return GameModel(
-            appId: g.appId,
-            name: g.name,
-            publisher: g.publisher ?? [],
-            description: g.description,
-            headerImage: g.headerImage,
-            libraryImage: g.libraryImage,
-            addedAt: g.addedAt,
-            platformSource: g.platformSource,
-            isSynced: g.isSynced,
-            trophies: trophiesMap[g.appId] ?? [],
-          );
-        }).toList();
-      },
-    ).distinct((prev, next) => const ListEquality().equals(prev, next));
+    return db
+        .customSelect('SELECT 1', readsFrom: {db.games, db.trophies})
+        .watch()
+        .switchMap((_) => Stream.fromFuture(fetchGamesFromDb()))
+        .distinct((prev, next) => const ListEquality().equals(prev, next));
   }
 
+  /// Searches the offline catalog by name and returns at most [limit] games.
+  ///
+  /// Names that start with the query come first, then alphabetical order.
+  /// `%`, `_` and `\` typed by the user are matched literally.
   @override
-  Future<List<GameModel>> searchInLocalCatalog(String query) async {
-    final lowerQuery = query.toLowerCase();
-    final results = await (db.select(
-      db.steamCatalog,
-    )..where((t) => t.name.lower().like('%$lowerQuery%'))).get();
+  Future<List<GameModel>> searchInLocalCatalog(
+    String query, {
+    int limit = 50,
+  }) async {
+    final escaped = query.toLowerCase().replaceAllMapped(
+      RegExp(r'[\\%_]'),
+      (match) => '\\${match[0]}',
+    );
+    final results =
+        await (db.select(db.steamCatalog)
+              ..where(
+                (t) => t.name.lower().like('%$escaped%', escapeChar: r'\'),
+              )
+              ..orderBy([
+                (t) => OrderingTerm.desc(
+                  t.name.lower().like('$escaped%', escapeChar: r'\'),
+                ),
+                (t) => OrderingTerm.asc(t.name),
+              ])
+              ..limit(limit))
+            .get();
     return results
         .map(
           (r) => GameModel(
@@ -196,13 +186,17 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         .toList();
   }
 
+  /// Returns the highest appId saved in the catalog, or 0 when it is empty.
+  ///
+  /// The remote catalog is paginated by ascending appId, so this is the point
+  /// to resume the download from.
   @override
-  Future<bool> isCatalogEmpty() async {
-    final countExp = db.steamCatalog.appId.count();
-    final query = db.selectOnly(db.steamCatalog)..addColumns([countExp]);
-    final result = await query.map((row) => row.read(countExp)).getSingle();
+  Future<int> getLastCatalogAppId() async {
+    final maxExp = db.steamCatalog.appId.max();
+    final query = db.selectOnly(db.steamCatalog)..addColumns([maxExp]);
+    final result = await query.map((row) => row.read(maxExp)).getSingle();
 
-    return result == 0;
+    return result ?? 0;
   }
 
   @override

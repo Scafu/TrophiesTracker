@@ -8,7 +8,7 @@ abstract class GameRepository {
   Future<Game> getGameByIdRemote(int appId, {String? token});
   Future<List<Game>> searchLocalCatalog(String query);
   Future<void> syncSteamCatalog();
-  Future<void> fetchGamesFromSteamAccount(String token);
+  Future<int> fetchGamesFromSteamAccount(String token);
   Future<void> saveGame(Game game);
   Future<void> saveGames(List<Game> games);
   Future<void> deleteGame(int appId);

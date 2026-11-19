@@ -37,19 +37,24 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
     }
   }
 
+  /// Syncs the achievements of a loaded game, at most once every 5 minutes.
+  ///
+  /// A rate limit or a failure is emitted as [GameDetailsError] and followed
+  /// by the previous loaded state, so the page stays usable. A failed sync
+  /// frees the rate limit so it can be retried right away.
   Future<void> syncAchievements(int appId, {String? token}) async {
     final key = 'syncAchievements_$appId';
 
+    final currentState = state;
+    if (currentState is! GameDetailsLoaded) return;
+
     if (!_rateRequestLimiter.isAllowed(key, const Duration(minutes: 5))) {
-      emit(GameDetailsError('429'));
+      emit(const GameDetailsError(rateLimitedMessage));
+      emit(currentState);
       return;
     }
 
     _rateRequestLimiter.markRequest(key);
-    if (state is! GameDetailsLoaded) return;
-
-    final currentState = state as GameDetailsLoaded;
-
     emit(currentState.copyWith(isSyncing: true));
 
     try {
@@ -105,6 +110,7 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
 
       emit(GameDetailsLoaded(game: updatedGame, isSyncing: false));
     } catch (e) {
+      _rateRequestLimiter.clear(key);
       emit(GameDetailsError("Sync error: $e"));
       emit(currentState.copyWith(isSyncing: false));
     }

@@ -23,22 +23,26 @@ class GamePageView extends StatefulWidget {
 }
 
 class _GamePageViewState extends State<GamePageView> {
-  List<Game> _lastGames = [];
+  List<Game>? _lastGames;
+
+  /// Shows [message] in a snackbar.
+  ///
+  /// This is the only place that reports library sync results, wherever the
+  /// sync was started from: the page stays mounted below the account page.
+  void _showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<GameCubit, GameState>(
       listener: (context, state) {
         state.maybeWhen(
-          error: (message) {
-            if (message.contains('429')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Too many requests. Please try again later.'),
-                ),
-              );
-            }
-          },
+          error: (message) => _showMessage(context, message),
+          syncSuccess: () =>
+              _showMessage(context, 'Steam library synced successfully!'),
           orElse: () {},
         );
       },
@@ -46,10 +50,11 @@ class _GamePageViewState extends State<GamePageView> {
         return state.when(
           initial: () => const Center(child: Text('Initialization...')),
           loading: () => const Center(child: CircularProgressIndicator()),
-          syncSuccess: () => _buildGameGrid(_lastGames),
+          syncSuccess: () => _buildGameGrid(_lastGames ?? const []),
           error: (message) {
-            if (message.contains('429')) {
-              return _buildGameGrid(_lastGames);
+            final lastGames = _lastGames;
+            if (lastGames != null) {
+              return _buildGameGrid(lastGames);
             }
             return Center(
               child: Column(

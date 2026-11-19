@@ -89,27 +89,6 @@ class _AccountPageState extends State<AccountPage> {
               state.maybeWhen(
                 authenticated: (user) =>
                     _trySyncIfNeeded(context, user.token ?? ''),
-                error: (message) {
-                  if (message == '429') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Too many requests. Try again later."),
-                      ),
-                    );
-                  }
-                },
-                orElse: () {},
-              );
-            },
-          ),
-          BlocListener<GameCubit, GameState>(
-            listener: (context, state) {
-              state.maybeWhen(
-                syncSuccess: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Steam library synced successfully!'),
-                  ),
-                ),
                 error: (message) => ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text(message))),

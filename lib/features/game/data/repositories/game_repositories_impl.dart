@@ -1,3 +1,4 @@
+import 'package:rxdart/rxdart.dart';
 import 'package:trophies_tracker/core/services/log.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_local_data_source.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_source.dart';
@@ -34,15 +35,17 @@ class GameRepositoriesImpl implements GameRepository {
     return localModels.map((model) => model.toEntity()).toList();
   }
 
-  /// Synchronizes the complete Steam catalog from the remote API to the local database.
+  /// Keeps the local Steam catalog complete and up to date.
   ///
-  /// This method checks if the local catalog is already populated. If empty,
-  /// it downloads the catalog in chunks and performs a massive batch insert.
+  /// On the first run it saves the first chunks before returning, so search
+  /// works right away, and downloads the rest in the background. On later runs
+  /// it resumes in the background from the highest saved appId, which finishes
+  /// an interrupted download and adds newly released apps.
   @override
   Future<void> syncSteamCatalog() async {
-    final isDbEmpty = await localDataSource.isCatalogEmpty();
-    if (!isDbEmpty) {
-      logger.i("Steam catalog already exists in local database.");
+    final lastAppId = await localDataSource.getLastCatalogAppId();
+    if (lastAppId > 0) {
+      _syncRemainingCatalog(lastAppId);
       return;
     }
 
@@ -60,18 +63,30 @@ class GameRepositoriesImpl implements GameRepository {
     _syncRemainingCatalog(partial.lastAppId);
   }
 
-  void _syncRemainingCatalog(int fromAppId) {
-    remoteDataSource
-        .fetchSteamCatalogOnline(startFromAppId: fromAppId)
-        .then((result) async {
-          await localDataSource.saveSteamCatalogToDb(result.apps);
-          logger.i(
-            "Background catalog sync complete (${result.apps.length} more games).",
-          );
-        })
-        .catchError((e) {
-          logger.e("Background catalog sync failed: $e");
-        });
+  /// Downloads the catalog from [fromAppId] to the end, two chunks at a time.
+  ///
+  /// Each slice is saved as soon as it arrives, so memory stays bounded and an
+  /// interrupted run resumes from the highest saved appId. Failures are only
+  /// logged: this runs in the background.
+  Future<void> _syncRemainingCatalog(int fromAppId) async {
+    try {
+      var next = fromAppId;
+      var hasMore = true;
+      var total = 0;
+      while (hasMore) {
+        final slice = await remoteDataSource.fetchSteamCatalogOnline(
+          maxChunks: 2,
+          startFromAppId: next,
+        );
+        await localDataSource.saveSteamCatalogToDb(slice.apps);
+        total += slice.apps.length;
+        hasMore = slice.hasMore && slice.lastAppId > next;
+        next = slice.lastAppId;
+      }
+      logger.i("Background catalog sync complete ($total more games).");
+    } catch (e) {
+      logger.e("Background catalog sync failed: $e");
+    }
   }
 
   /// Saves a single [Game] entity to the local database.
@@ -106,14 +121,18 @@ class GameRepositoriesImpl implements GameRepository {
     );
   }
 
+  late final Stream<List<Game>> _library = localDataSource
+      .watchLibrary()
+      .map((gameModels) => gameModels.map((m) => m.toEntity()).toList())
+      .shareValue();
+
   /// Returns a reactive stream of the user's game library.
-  /// Emits a new list of [Game] entities whenever the underlying local data changes.
+  ///
+  /// Emits a new list of [Game] entities whenever the underlying local data
+  /// changes. All listeners share one database query, and a new listener
+  /// starts with the latest library.
   @override
-  Stream<List<Game>> watchLibrary() {
-    return localDataSource.watchLibrary().map((gameModels) {
-      return gameModels.map((gameModel) => gameModel.toEntity()).toList();
-    });
-  }
+  Stream<List<Game>> watchLibrary() => _library;
 
   /// Converts a [Game] entity into a [GameModel] for local data operations.
   GameModel _mapToModel(Game game) {
@@ -187,16 +206,17 @@ class GameRepositoriesImpl implements GameRepository {
     return await localDataSource.updateStateTrophy(appId, trophyName, status);
   }
 
+  /// Downloads the games of the Steam account, marks them as synced and saves
+  /// them locally. Returns how many games were saved.
   @override
-  Future<void> fetchGamesFromSteamAccount(String token) async {
+  Future<int> fetchGamesFromSteamAccount(String token) async {
     final List<GameModel> remoteGames = await remoteDataSource
         .fetchGamesFromSteamAccount(token);
 
     if (remoteGames.isEmpty) {
-      return;
+      return 0;
     }
 
-    // Mark games as synced when they come from the account fetch
     final syncedGames = remoteGames
         .map((g) => g.copyWith(isSynced: true))
         .toList();
@@ -204,5 +224,6 @@ class GameRepositoriesImpl implements GameRepository {
     await localDataSource.saveGamesToDb(syncedGames);
 
     logger.i("Fetched and synced games from Steam account successfully");
+    return syncedGames.length;
   }
 }

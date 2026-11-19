@@ -12,23 +12,23 @@ abstract class GameRemoteDataSource {
   fetchSteamCatalogOnline({int maxChunks, int startFromAppId});
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token);
   Future<GameModel> getGameByIdRemote(int appId, {String? token});
-
 }
 
-List<Map<String, dynamic>> _parseSteamCatalogChunk(String responseBody) {
-  final decoded = json.decode(responseBody);
-  final responseData = decoded['response'];
-
-  if (responseData == null || responseData['apps'] == null) {
-    return [];
-  }
-
-  final apps = responseData['apps'] as List<dynamic>;
-
-  return apps
+/// Parses one `/catalog` page (runs in an isolate via `compute`): the apps that
+/// have a name, whether more pages follow and the appId to continue from.
+({List<Map<String, dynamic>> apps, bool hasMore, int? lastAppId})
+_parseSteamCatalogChunk(String responseBody) {
+  final responseData = json.decode(responseBody)['response'];
+  final apps = (responseData?['apps'] as List<dynamic>? ?? const [])
       .map((e) => e as Map<String, dynamic>)
       .where((app) => app['name'] != null && app['name'].toString().isNotEmpty)
       .toList();
+
+  return (
+    apps: apps,
+    hasMore: responseData?['have_more_results'] ?? false,
+    lastAppId: responseData?['last_appid'],
+  );
 }
 
 class GameRemoteDataSourceImpl implements GameRemoteDataSource {
@@ -36,7 +36,6 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
   final String proxyBaseUrl;
 
   GameRemoteDataSourceImpl({required this.client, required this.proxyBaseUrl});
-
 
   @override
   Future<List<GameModel>> searchGamesOnline(
@@ -91,17 +90,18 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
       final url = Uri.parse(
         '$proxyBaseUrl/catalog?last_appid=$currentLastAppId',
       );
-      final response = await client.get(url);
+      final response = await client
+          .get(url)
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final chunk = await compute(_parseSteamCatalogChunk, response.body);
-        allApps.addAll(chunk);
+        allApps.addAll(chunk.apps);
         chunkCount++;
 
-        final decoded = json.decode(response.body);
-        final responseData = decoded['response'];
-        hasMore = responseData['have_more_results'] ?? false;
-        if (hasMore) currentLastAppId = responseData['last_appid'];
+        final nextAppId = chunk.lastAppId ?? currentLastAppId;
+        hasMore = chunk.hasMore && nextAppId > currentLastAppId;
+        if (hasMore) currentLastAppId = nextAppId;
       } else {
         throw Exception('HTTP ${response.statusCode}');
       }
@@ -110,6 +110,11 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
     return (apps: allApps, lastAppId: currentLastAppId, hasMore: hasMore);
   }
 
+  /// Fetches a game and its trophy schema, merged with the player's progress
+  /// when a [token] is given.
+  ///
+  /// Throws if the player's achievements cannot be read: callers must never
+  /// mistake a failed call for "nothing unlocked" and overwrite saved progress.
   @override
   Future<GameModel> getGameByIdRemote(int appId, {String? token}) async {
     final gameUrl = Uri.parse('$proxyBaseUrl/game?appid=$appId');
@@ -124,9 +129,14 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
 
     if (token != null) {
       final playerAchievementsUrl = Uri.parse(
-        '$proxyBaseUrl/playerAchievements?token=$token&appid=$appId',
+        '$proxyBaseUrl/playerAchievements',
+      ).replace(queryParameters: {'appid': '$appId'});
+      requests.add(
+        client.get(
+          playerAchievementsUrl,
+          headers: {'Authorization': 'Bearer $token'},
+        ),
       );
-      requests.add(client.get(playerAchievementsUrl));
     }
 
     final responses = await Future.wait(requests);
@@ -144,6 +154,13 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
       );
     }
 
+    if (token != null && playerAchievementsResponse?.statusCode != 200) {
+      throw Exception(
+        'Failed to fetch player achievements '
+        '(HTTP ${playerAchievementsResponse?.statusCode}).',
+      );
+    }
+
     return await compute(_parseAndMergeGameData, {
       'appId': appId,
       'gameBody': gameResponse.statusCode == 200 ? gameResponse.body : null,
@@ -158,7 +175,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
 
   @override
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token) async {
-    final gamesUrl = Uri.parse('$proxyBaseUrl/library?token=$token');
+    final gamesUrl = Uri.parse('$proxyBaseUrl/library');
     try {
       final response = await client
           .get(
@@ -166,6 +183,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
             },
           )
           .timeout(const Duration(seconds: 30));
@@ -252,6 +270,11 @@ List<dynamic> _parseLibraryResponse(String body) {
   return [];
 }
 
+/// Builds a [GameModel] from the raw `/game`, `/achievements` and
+/// `/playerAchievements` bodies (runs in an isolate via `compute`).
+///
+/// Throws when `playerAchievementsBody` is present but has no `achievements`
+/// (e.g. HTTP 200 with `success: false`), so it is never read as "all locked".
 GameModel _parseAndMergeGameData(Map<String, dynamic> params) {
   final int appId = params['appId'];
   final String? gameBody = params['gameBody'];
@@ -349,9 +372,12 @@ GameModel _parseAndMergeGameData(Map<String, dynamic> params) {
             return trophy;
           }).toList();
         }
+      } else {
+        throw Exception('Player achievements unavailable for $appId');
       }
     } catch (e) {
       debugPrint('Error parsing player achievements for $appId: $e');
+      rethrow;
     }
   }
 

@@ -50,12 +50,9 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
           });
         }
         if (state is GameDetailsError) {
-          final message = state.message.contains('429')
-              ? 'Too many requests. Please try again later.'
-              : state.message;
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(message)));
+          ).showSnackBar(SnackBar(content: Text(state.message)));
         } else if (state is GameDetailsSyncSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

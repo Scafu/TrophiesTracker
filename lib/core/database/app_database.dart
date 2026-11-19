@@ -76,6 +76,8 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 3;
 
+  /// Schema upgrades, plus `PRAGMA foreign_keys = ON` on every connection:
+  /// SQLite ignores `onDelete: cascade` unless it is enabled.
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
@@ -84,6 +86,7 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(games, games.isSynced);
         }
       },
+      beforeOpen: (details) => customStatement('PRAGMA foreign_keys = ON'),
     );
   }
 }
