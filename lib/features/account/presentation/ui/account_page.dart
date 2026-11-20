@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:trophies_tracker/core/widgets/app_toast.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
+import 'package:trophies_tracker/features/account/presentation/ui/legal_disclaimer.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_state.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_state.dart';
@@ -89,9 +91,8 @@ class _AccountPageState extends State<AccountPage> {
               state.maybeWhen(
                 authenticated: (user) =>
                     _trySyncIfNeeded(context, user.token ?? ''),
-                error: (message) => ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(message))),
+                error: (message) =>
+                    showAppToast(context, message, kind: ToastKind.error),
                 orElse: () {},
               );
             },
@@ -141,6 +142,11 @@ class _AccountPageState extends State<AccountPage> {
                         icon: Symbols.description_rounded,
                         title: 'Licenses',
                         onTap: () => showLicensePage(context: context),
+                      ),
+                      _SettingsTile(
+                        icon: Symbols.gavel_rounded,
+                        title: 'Legal disclaimer',
+                        onTap: () => showLegalDisclaimer(context),
                       ),
                       _SettingsTile(
                         icon: Icons.policy_outlined,

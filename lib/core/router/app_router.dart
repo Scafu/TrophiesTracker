@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trophies_tracker/core/di/injection_container.dart';
 import 'package:trophies_tracker/core/utils/splash/splash_screen.dart';
-import 'package:trophies_tracker/core/widgets/app_appbar.dart';
 import 'package:trophies_tracker/core/widgets/app_navigation_bar.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/account_page.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/credits_page.dart';
@@ -57,12 +56,11 @@ class AppRouter {
               return NoTransitionPage<void>(
                 child: Scaffold(
                   extendBody: true,
-                  body: navigationShell,
+                  body: SafeArea(bottom: false, child: navigationShell),
                   bottomNavigationBar: AppNavigationBar(
                     currentIndex: navigationShell.currentIndex,
                     onSelected: navigationShell.goBranch,
                   ),
-                  appBar: AppAppBar(shell: navigationShell),
                 ),
               );
             },
