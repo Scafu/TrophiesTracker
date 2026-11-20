@@ -10,4 +10,5 @@ class ColorsPalette {
   );
   static final colorGray = const Color.fromARGB(255, 94, 94, 94);
   static final colorGreen = const Color.fromARGB(255, 33, 243, 86);
+  static const colorGold = Color(0xFFFBBF24);
 }

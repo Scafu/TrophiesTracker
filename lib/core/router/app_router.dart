@@ -56,8 +56,12 @@ class AppRouter {
             ) {
               return NoTransitionPage<void>(
                 child: Scaffold(
+                  extendBody: true,
                   body: navigationShell,
-                  bottomNavigationBar: AppNavigationBar(shell: navigationShell),
+                  bottomNavigationBar: AppNavigationBar(
+                    currentIndex: navigationShell.currentIndex,
+                    onSelected: navigationShell.goBranch,
+                  ),
                   appBar: AppAppBar(shell: navigationShell),
                 ),
               );
