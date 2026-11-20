@@ -94,7 +94,7 @@ Future<void> init() async {
 
   sl.registerFactory(() => ExploreCubit(sl()));
 
-  sl.registerFactory(() => StatsCubit(sl(), sl()));
+  sl.registerFactory(() => StatsCubit(sl()));
 
   sl.registerFactory(() => GameDetailsCubit(sl(), sl(), sl()));
 
