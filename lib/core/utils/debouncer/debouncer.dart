@@ -14,4 +14,7 @@ class Debouncer {
     }
     _timer = Timer(Duration(milliseconds: milliseconds), action);
   }
+
+  /// Drops the pending action, if any.
+  void cancel() => _timer?.cancel();
 }
