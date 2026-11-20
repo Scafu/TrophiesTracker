@@ -219,3 +219,84 @@ test("assetlinks names the Android applicationId", async () => {
 
   assert.equal(link.target.package_name, "com.alessandromazzariol.trophiestracker");
 });
+
+test("/covers returns the real vertical art, skipping games that have none", async () => {
+  let requested;
+  steam = (url) => {
+    requested = url;
+    return Response.json({
+      response: {
+        store_items: [
+          {
+            appid: 1,
+            assets: {
+              asset_url_format: "steam/apps/1/${FILENAME}?t=9",
+              library_capsule_2x: "abc123/library_capsule_2x.jpg",
+            },
+          },
+          { appid: 2, assets: { asset_url_format: "steam/apps/2/${FILENAME}?t=9" } },
+          {
+            appid: 3,
+            assets: {
+              asset_url_format: "steam/apps/3/${FILENAME}?t=9",
+              library_capsule: "def456/library_capsule.jpg",
+            },
+          },
+        ],
+      },
+    });
+  };
+
+  const response = await call("/covers?ids=1,2,3");
+
+  assert.deepEqual(await response.json(), {
+    1: { library: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1/abc123/library_capsule_2x.jpg?t=9" },
+    3: { library: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3/def456/library_capsule.jpg?t=9" },
+  });
+  assert.match(decodeURIComponent(requested), /"appid":1.*"appid":2.*"appid":3/);
+  assert.doesNotMatch(requested, /key=/);
+});
+
+test("/covers refuses ids that are not numbers or are too many", async () => {
+  const many = Array.from({ length: 101 }, (_, i) => i + 1).join(",");
+
+  assert.equal((await call("/covers")).status, 400);
+  assert.equal((await call("/covers?ids=1,x")).status, 400);
+  assert.equal((await call(`/covers?ids=${many}`)).status, 400);
+});
+
+test("/covers reports a Steam failure as 502", async () => {
+  steam = () => new Response("down", { status: 500 });
+
+  assert.equal((await call("/covers?ids=1")).status, 502);
+});
+
+test("/rarity returns the unlock percentage of every achievement as numbers", async () => {
+  let requested;
+  steam = (url) => {
+    requested = url;
+    return Response.json({
+      achievementpercentages: {
+        achievements: [
+          { name: "ACH_A", percent: "12.5" },
+          { name: "ACH_B", percent: 0.4 },
+          { name: "ACH_C", percent: "n/a" },
+        ],
+      },
+    });
+  };
+
+  const response = await call("/rarity?appid=105600");
+
+  assert.deepEqual(await response.json(), { ACH_A: 12.5, ACH_B: 0.4 });
+  assert.match(requested, /gameid=105600/);
+  assert.doesNotMatch(requested, /key=/);
+});
+
+test("/rarity refuses a bad appid and reports a Steam failure as 502", async () => {
+  assert.equal((await call("/rarity?appid=abc")).status, 400);
+  assert.equal((await call("/rarity")).status, 400);
+
+  steam = () => new Response("down", { status: 500 });
+  assert.equal((await call("/rarity?appid=1")).status, 502);
+});

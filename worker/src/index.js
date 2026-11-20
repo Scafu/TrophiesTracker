@@ -5,6 +5,7 @@ const NUMERIC = /^\d+$/;
 const LANGUAGE = /^[a-z]{2,20}$/;
 const CLAIMED_ID = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/;
 const STEAM_OPENID = "https://steamcommunity.com/openid/login";
+const STORE_ASSETS = "https://shared.akamai.steamstatic.com/store_item_assets/";
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 giorni
 const CODE_TTL = 60; // minimo consentito da KV
 
@@ -365,6 +366,80 @@ export default {
 
       const apiUrl = `https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${env.STEAM_API_KEY}&appid=${appid}&l=${lang}`;
       return relaySteam(await fetch(apiUrl));
+    }
+
+    // ==========================================
+    // 8b. COPERTINE (pubblico, no token)
+    // ==========================================
+
+    /**
+     * Restituisce, per ogni gioco richiesto (`?ids=1,2,3`, al massimo 100),
+     * l'URL reale della copertina verticale. Per molti giochi recenti Steam
+     * tiene l'immagine in un percorso con hash; quello senza hash risponde 200
+     * con un segnaposto grigio, quindi l'app non può indovinarlo. Il percorso
+     * si legge dallo store di Steam, che non richiede la chiave API.
+     */
+    if (url.pathname === "/covers") {
+      const ids = (url.searchParams.get("ids") || "").split(",");
+      if (ids.length > 100 || !ids.every((id) => NUMERIC.test(id))) {
+        return jsonResponse({ error: "ids non validi" }, 400);
+      }
+
+      const input = {
+        ids: ids.map((appid) => ({ appid: Number(appid) })),
+        context: { language: "english", country_code: "US" },
+        data_request: { include_assets: true },
+      };
+      const response = await fetch(
+        `https://api.steampowered.com/IStoreBrowseService/GetItems/v1?input_json=${encodeURIComponent(JSON.stringify(input))}`
+      );
+      const data = await readJson(response);
+      if (!response.ok || data === null) {
+        return jsonResponse({ error: "Risposta non valida da Steam" }, 502);
+      }
+
+      const covers = {};
+      for (const item of data.response?.store_items ?? []) {
+        const assets = item.assets;
+        const asset = (name) =>
+          assets?.asset_url_format && assets[name]
+            ? STORE_ASSETS + assets.asset_url_format.replace("${FILENAME}", assets[name])
+            : null;
+        const library = asset("library_capsule_2x") ?? asset("library_capsule");
+        if (library) covers[item.appid] = { library };
+      }
+      return jsonResponse(covers, 200, { "Cache-Control": "max-age=86400" });
+    }
+
+    // ==========================================
+    // 8c. RARITÀ DEI TROFEI (pubblico, no token)
+    // ==========================================
+
+    /**
+     * Percentuale globale di giocatori che ha sbloccato ogni achievement di un
+     * gioco (`?appid=`), come mappa `{ nomeApi: percentuale }`. Steam a volte
+     * restituisce le percentuali come stringhe: qui diventano numeri.
+     */
+    if (url.pathname === "/rarity") {
+      const appid = url.searchParams.get("appid");
+      if (!NUMERIC.test(appid || "")) {
+        return jsonResponse({ error: "appid non valido" }, 400);
+      }
+
+      const response = await fetch(
+        `https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appid}`
+      );
+      const data = await readJson(response);
+      if (!response.ok || data === null) {
+        return jsonResponse({ error: "Risposta non valida da Steam" }, 502);
+      }
+
+      const rarity = {};
+      for (const item of data.achievementpercentages?.achievements ?? []) {
+        const percent = Number(item.percent);
+        if (item.name && Number.isFinite(percent)) rarity[item.name] = percent;
+      }
+      return jsonResponse(rarity, 200, { "Cache-Control": "max-age=86400" });
     }
 
     // ==========================================
