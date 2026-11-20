@@ -37,6 +37,11 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
     }
   }
 
+  /// Share of players who unlocked each trophy of [appId], by API name; empty
+  /// when it is not available.
+  Future<Map<String, double>> fetchRarity(int appId) =>
+      _repository.getRarity(appId);
+
   /// Syncs the achievements of a loaded game, at most once every 5 minutes.
   ///
   /// A rate limit or a failure is emitted as [GameDetailsError] and followed

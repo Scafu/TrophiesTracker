@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trophies_tracker/core/services/log.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_local_data_source.dart';
 import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_source.dart';
@@ -11,12 +12,17 @@ import 'package:trophies_tracker/features/game/domain/repositories/game_reposito
 class GameRepositoriesImpl implements GameRepository {
   final GameLocalDataSource localDataSource;
   final GameRemoteDataSource remoteDataSource;
+
+  /// Where the time of the last Steam sync is kept; without it nothing is.
+  final SharedPreferences? sharedPreferences;
+  static const _lastSyncKey = 'last_steam_sync';
   final Map<int, Game> _cachedGames = {};
 
   /// Creates a new instance of [GameRepositoriesImpl].
   GameRepositoriesImpl({
     required this.localDataSource,
     required this.remoteDataSource,
+    this.sharedPreferences,
   });
 
   /// Retrieves all saved games from the local database.
@@ -32,6 +38,50 @@ class GameRepositoriesImpl implements GameRepository {
   Future<List<Game>> searchLocalCatalog(String query) async {
     final localModels = await localDataSource.searchInLocalCatalog(query);
     return localModels.map((model) => model.toEntity()).toList();
+  }
+
+  final Map<int, String> _covers = {};
+
+  /// Returns [games] with the cover Steam really serves for them.
+  ///
+  /// Used for search results, which come from the offline catalog and have no
+  /// images. Lookups are remembered for the session, including the games that
+  /// have no cover, so typing a longer query does not ask for them again.
+  @override
+  Future<List<Game>> withCovers(List<Game> games) async {
+    final missing = [
+      for (final game in games)
+        if (!_covers.containsKey(game.appId)) game.appId,
+    ];
+    if (missing.isNotEmpty) {
+      final found = await remoteDataSource.fetchCovers(missing);
+      for (final appId in missing) {
+        _covers[appId] = found[appId] ?? '';
+      }
+    }
+
+    return [
+      for (final game in games)
+        (_covers[game.appId] ?? '').isEmpty
+            ? game
+            : game.copyWith(libraryImage: _covers[game.appId]),
+    ];
+  }
+
+  final Map<int, Map<String, double>> _rarity = {};
+
+  /// The share of players who unlocked each trophy of [appId], by API name.
+  ///
+  /// Remembered for the session, but only when something was found, so a
+  /// failed lookup is retried the next time the page opens.
+  @override
+  Future<Map<String, double>> getRarity(int appId) async {
+    final known = _rarity[appId];
+    if (known != null) return known;
+
+    final found = await remoteDataSource.fetchRarity(appId);
+    if (found.isNotEmpty) _rarity[appId] = found;
+    return found;
   }
 
   /// Keeps the local Steam catalog complete and up to date.
@@ -205,6 +255,12 @@ class GameRepositoriesImpl implements GameRepository {
     return await localDataSource.updateStateTrophy(appId, trophyName, status);
   }
 
+  @override
+  DateTime? get lastSteamSync {
+    final millis = sharedPreferences?.getInt(_lastSyncKey);
+    return millis == null ? null : DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
   /// Downloads the games of the Steam account, marks them as synced and saves
   /// them locally. Returns how many games were saved.
   @override
@@ -222,6 +278,10 @@ class GameRepositoriesImpl implements GameRepository {
 
     await localDataSource.saveGamesToDb(syncedGames);
 
+    await sharedPreferences?.setInt(
+      _lastSyncKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
     logger.i("Fetched and synced games from Steam account successfully");
     return syncedGames.length;
   }

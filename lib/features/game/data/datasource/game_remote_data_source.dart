@@ -12,6 +12,8 @@ abstract class GameRemoteDataSource {
   fetchSteamCatalogOnline({int maxChunks, int startFromAppId});
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token);
   Future<GameModel> getGameByIdRemote(int appId, {String? token});
+  Future<Map<int, String>> fetchCovers(List<int> appIds);
+  Future<Map<String, double>> fetchRarity(int appId);
 }
 
 /// Parses one `/catalog` page (runs in an isolate via `compute`): the apps that
@@ -110,13 +112,20 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
     return (apps: allApps, lastAppId: currentLastAppId, hasMore: hasMore);
   }
 
-  /// Fetches a game and its trophy schema, merged with the player's progress
-  /// when a [token] is given.
+  /// Fetches a game, its trophy schema and its cover art, merged with the
+  /// player's progress when a [token] is given.
   ///
   /// Throws if the player's achievements cannot be read: callers must never
   /// mistake a failed call for "nothing unlocked" and overwrite saved progress.
   @override
   Future<GameModel> getGameByIdRemote(int appId, {String? token}) async {
+    final game = await _fetchGame(appId, token: token);
+    return (await _withCovers([game])).single;
+  }
+
+  /// Same as [getGameByIdRemote] without the cover lookup, so that a library
+  /// sync can look every cover up in a single request.
+  Future<GameModel> _fetchGame(int appId, {String? token}) async {
     final gameUrl = Uri.parse('$proxyBaseUrl/game?appid=$appId');
     final achievementsUrl = Uri.parse(
       '$proxyBaseUrl/achievements?appid=$appId',
@@ -173,6 +182,78 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
     });
   }
 
+  /// Looks up the vertical cover Steam really serves for each of [appIds];
+  /// games without one are left out of the result.
+  ///
+  /// The default URL built from the appId answers 200 with a grey placeholder
+  /// for many recent games, whose art lives at a hashed path only the Worker
+  /// can look up (`/covers`, up to 100 games per request). It is cosmetic, so
+  /// a failure (old Worker, no network) just returns what was found so far.
+  @override
+  Future<Map<int, String>> fetchCovers(List<int> appIds) async {
+    final covers = <int, String>{};
+
+    for (var i = 0; i < appIds.length; i += 100) {
+      final ids = appIds.skip(i).take(100).join(',');
+      try {
+        final response = await client
+            .get(
+              Uri.parse(
+                '$proxyBaseUrl/covers',
+              ).replace(queryParameters: {'ids': ids}),
+            )
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode != 200) continue;
+
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        for (final entry in data.entries) {
+          final library = entry.value['library'];
+          if (library is String && library.isNotEmpty) {
+            covers[int.parse(entry.key)] = library;
+          }
+        }
+      } catch (e) {
+        debugPrint('Could not look up covers: $e');
+      }
+    }
+    return covers;
+  }
+
+  /// The share of players (0-100) who unlocked each achievement of [appId],
+  /// by API name, or an empty map when it cannot be read.
+  ///
+  /// It only decorates the trophy list, so a failure (old Worker, no network,
+  /// a game without achievements) is not an error.
+  @override
+  Future<Map<String, double>> fetchRarity(int appId) async {
+    try {
+      final response = await client
+          .get(Uri.parse('$proxyBaseUrl/rarity?appid=$appId'))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) return {};
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return {
+        for (final entry in data.entries)
+          if (entry.value is num) entry.key: (entry.value as num).toDouble(),
+      };
+    } catch (e) {
+      debugPrint('Could not look up rarity for $appId: $e');
+      return {};
+    }
+  }
+
+  /// Returns [games] with the covers [fetchCovers] finds for them.
+  Future<List<GameModel>> _withCovers(List<GameModel> games) async {
+    final covers = await fetchCovers([for (final game in games) game.appId]);
+    return [
+      for (final game in games)
+        covers.containsKey(game.appId)
+            ? game.copyWith(libraryImage: covers[game.appId])
+            : game,
+    ];
+  }
+
   @override
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token) async {
     final gamesUrl = Uri.parse('$proxyBaseUrl/library');
@@ -210,7 +291,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
               final String? name = data['name'];
 
               try {
-                return await getGameByIdRemote(appId, token: token);
+                return await _fetchGame(appId, token: token);
               } catch (e) {
                 debugPrint('Error fetching full details for game $appId: $e');
 
@@ -240,7 +321,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
           await Future.delayed(const Duration(milliseconds: 500));
         }
 
-        return results;
+        return await _withCovers(results);
       } else {
         throw Exception(
           'Failed to fetch games from Steam account: ${response.statusCode}',

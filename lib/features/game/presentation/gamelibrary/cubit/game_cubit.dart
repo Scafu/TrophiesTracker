@@ -24,6 +24,9 @@ class GameCubit extends Cubit<GameState> {
     this._rateRequestLimiter,
   ) : super(const GameState.initial());
 
+  /// When the library was last synced from Steam, if it ever was.
+  DateTime? get lastSync => repository.lastSteamSync;
+
   void watchGames() {
     _librarySubscription?.cancel();
     _librarySubscription = repository.watchLibrary().listen(

@@ -134,4 +134,77 @@ void main() {
     final game = await ds.getGameByIdRemote(1);
     expect(game.trophies.single.isAchieved, isFalse);
   });
+
+  group('covers', () {
+    const placeholder =
+        'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1/library_600x900_2x.jpg';
+    const real = 'https://x.test/1/abc/library_capsule_2x.jpg';
+
+    GameRemoteDataSourceImpl source(
+      http.Response Function(http.Request request) covers,
+    ) {
+      return GameRemoteDataSourceImpl(
+        client: MockClient((request) async {
+          final appid = request.url.queryParameters['appid'];
+          switch (request.url.path) {
+            case '/library':
+              return http.Response(
+                '[{"appId":1,"name":"A"},{"appId":2,"name":"B"}]',
+                200,
+              );
+            case '/game':
+              return http.Response(
+                '{"$appid":{"success":true,"data":{"name":"G"}}}',
+                200,
+              );
+            case '/achievements':
+              return http.Response(
+                '{"game":{"availableGameStats":{"achievements":'
+                '[{"name":"a","displayName":"A"}]}}}',
+                200,
+              );
+            case '/playerAchievements':
+              return http.Response(
+                '{"playerstats":{"achievements":[{"apiname":"a","achieved":1}]}}',
+                200,
+              );
+            default:
+              return covers(request);
+          }
+        }),
+        proxyBaseUrl: 'https://x.test',
+      );
+    }
+
+    test('a game gets the cover Steam really serves', () async {
+      final ds = source((_) => http.Response('{"1":{"library":"$real"}}', 200));
+
+      expect((await ds.getGameByIdRemote(1)).libraryImage, real);
+    });
+
+    test('the default cover stays when the lookup fails', () async {
+      for (final failing in [
+        http.Response('down', 500),
+        http.Response('not json', 200),
+      ]) {
+        final ds = source((_) => failing);
+
+        expect((await ds.getGameByIdRemote(1)).libraryImage, placeholder);
+      }
+    });
+
+    test('a library sync looks every cover up in one request', () async {
+      final asked = <String>[];
+      final ds = source((request) {
+        asked.add(request.url.queryParameters['ids']!);
+        return http.Response('{"2":{"library":"$real"}}', 200);
+      });
+
+      final games = await ds.fetchGamesFromSteamAccount('t');
+
+      expect(asked, ['1,2']);
+      expect(games.firstWhere((g) => g.appId == 2).libraryImage, real);
+      expect(games.firstWhere((g) => g.appId == 1).libraryImage, placeholder);
+    });
+  });
 }

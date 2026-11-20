@@ -49,7 +49,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<GameRepository>(
-    () => GameRepositoriesImpl(localDataSource: sl(), remoteDataSource: sl()),
+    () => GameRepositoriesImpl(
+      localDataSource: sl(),
+      remoteDataSource: sl(),
+      sharedPreferences: sl(),
+    ),
   );
 
   sl.registerLazySingleton<ActivityRepository>(
