@@ -57,7 +57,10 @@ workflows:
         script: |
           flutter build appbundle --release
       
+      # iOS is only checked to compile for now: there is no signing, so nothing
+      # distributable comes out of it. It must not stop the Android release.
       - name: Build iOS
+        ignore_failure: true
         script: |
           flutter build ios --release --no-codesign
       

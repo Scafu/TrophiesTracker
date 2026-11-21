@@ -10,6 +10,7 @@ Mettere l'app in test interno e poter dire che il necessario è fatto. L'utente:
 
 - **2026-11-21, si parte con un test interno su tutte e due le piattaforme.** L'utente ha scelto "Test interno": TestFlight interno su iOS e Play Console "internal testing" su Android. *Perché:* non passano dalla revisione degli store, pochi tester, sono i più veloci da far partire. *Scartati per ora:* solo Android; test esterno o pubblico (TestFlight esterno, closed e open testing), che passano dalla revisione e rendono subito rilevanti i rischi sui marchi, sull'API non ufficiale di Sony e sul pulsante Ko-fi (vedi sotto).
 - **2026-11-21, il bundle id iOS è `com.alessandromazzariol.trophiestracker`, lo stesso dell'`applicationId` Android.** *Perché:* un solo identificatore per le due piattaforme, e coerente con gli App Link; prima era `com.example.trophiesTracker` (B12). *Conseguenza:* l'app con il nuovo id è **un'altra app** per iOS: chi ha installato quella vecchia (per esempio il telefono dell'utente) se la ritrova accanto e deve disinstallarla; i dati e gli accessi salvati (archivio sicuro e database) non si trasferiscono, si rifà il login. Cambiati i sei `PRODUCT_BUNDLE_IDENTIFIER` in `ios/Runner.xcodeproj/project.pbxproj` (anche quelli di `RunnerTests`); l'app iOS per il simulatore compila.
+- **2026-11-21, per ora solo Android.** L'utente: "ho solo l'account google play". Si fa il test interno su Google Play; iOS (firma in Codemagic, TestFlight) aspetta l'account Apple Developer. Il bundle id iOS resta allineato, così non c'è altro da cambiare dopo. *Conseguenza in CI:* il passo "Build iOS" di `codemagic.yaml` è ora `ignore_failure: true`, perché senza firma non produce nulla di distribuibile e un suo errore non deve impedire la release Android (la creazione di tag e release viene dopo); da togliere quando si firma iOS.
 - **Già deciso prima e collegato:** il database non ha migrazioni (lo schema 3 è quello iniziale, chi ha un'installazione vecchia disinstalla: REVIEW.md V4); la release `v1.0.0` è stata cancellata da GitHub; i percorsi per le app vecchie sono tolti dal Worker (W9); il rischio sulla quota Free di Cloudflare è accettato per ora (`docs/features/rate-limiting.md`); la versione è `1.1.0+5` e la CI esegue `flutter test`.
 
 ## Già fatto, con le prove
@@ -19,20 +20,29 @@ Mettere l'app in test interno e poter dire che il necessario è fatto. L'utente:
 - `flutter analyze` pulito e 318 test verdi; build iOS (simulatore) e Android (debug, con Java 21 e un `key.properties` finto: REVIEW.md M11) riuscite.
 - Privacy policy riscritta in `worker/policy.html` (bozza, vedi sotto).
 
+## Android adesso (il percorso scelto)
+
+1. **Merge su `main`** (fast-forward: il ramo è avanti di 24 commit e non indietro). Un push su `main` fa partire Codemagic: analizza, esegue i test, costruisce APK e AAB firmati con `CM_KEYSTORE`, poi crea tag e release `v1.1.0` con `trophies-tracker-1.1.0.apk` e `.aab`. **Il repository è pubblico, quindi chiunque potrà scaricare quei file** (com'era per la vecchia `v1.0.0`).
+2. **Play Console, prima volta** (i nomi dei menu li ricordo, non li ho verificati): creare l'app (nome, lingua, app o gioco, gratis), con package `com.alessandromazzariol.trophiestracker`. Testing, Internal testing, Create new release: lasciare attiva la firma di Play (Play App Signing), caricare l'`.aab` della release, note di versione, Review e poi Roll out. Scheda Testers: una lista di e-mail (account Google dei tester) e il link di adesione da mandare loro.
+3. **Moduli:** Play può chiedere già adesso alcune dichiarazioni (privacy policy, annunci, pubblico, Data safety): l'indirizzo della policy è `https://trophiestracker.alessandro-mazzariol04.workers.dev/policy` (dopo averla ricaricata). Va compilato ciò che il pannello chiede per il test interno.
+4. **Ogni nuovo caricamento deve avere un numero di build più alto** (il `+5` di `pubspec.yaml`, oggi `1.1.0+5`): alza il numero prima di ogni release, oppure dimmelo e lo faccio io.
+5. **Dopo il primo caricamento:** l'impronta SHA-256 della chiave di firma di Play (Play Console, Configurazione, Firma dell'app) va aggiunta in `assetlinks.json` e il Worker ripubblicato (vedi sotto).
+6. **Provare** su un telefono Android installando dal link di test: login Steam, login PlayStation, `adb shell pm get-app-links com.alessandromazzariol.trophiestracker`.
+
 ## Da fare
 
-### Tuo (account, pannelli, dispositivi)
+### Tuo (account, pannelli, dispositivi; iOS solo quando c'è l'account Apple)
 
 1. **Rileggere e pubblicare la privacy policy.** Il testo è in `worker/policy.html`; si carica con `cd worker && npx wrangler kv key put privacy-policy --binding=KV --path=policy.html --remote`. Prima rileggila: è una bozza mia su cosa fa davvero l'app. Non ho messo i link alle policy di Sony e di Ko-fi perché non ho potuto verificarli.
-2. **Account Apple Developer** (a pagamento) e creare l'app in App Store Connect con il bundle id sopra.
-3. **Account Google Play Console** e creare l'app con `com.alessandromazzariol.trophiestracker`.
+2. **(Rimandato, serve l'account)** Account Apple Developer (a pagamento) e creare l'app in App Store Connect con il bundle id sopra.
+3. **Account Google Play Console**: già aperto (2026-11-21); creare l'app con `com.alessandromazzariol.trophiestracker` (vedi "Android adesso").
 4. **Android: la prima release in test interno** si carica a mano dal pannello con l'`app-release.aab` che Codemagic già costruisce firmato (`CM_KEYSTORE`). Dopo il primo caricamento Play firma l'app con la **sua** chiave (Play App Signing): l'impronta SHA-256 di quella chiave (Play Console, Configurazione, Firma dell'app) va **aggiunta** a `sha256_cert_fingerprints` in `assetlinks.json` (nel Worker, `index.js`; oggi c'è una sola impronta) e il Worker ripubblicato. Non blocca il login (se l'App Link non si verifica funziona lo stesso il passaggio dallo scheme `trophiestracker://`), ma l'App Link è il percorso pulito.
 5. **Una prova su un telefono Android vero:** login Steam, login PlayStation (il ritorno da Sony e la sessione "pulita" del browser, che non ho potuto verificare) e `adb shell pm get-app-links com.alessandromazzariol.trophiestracker`.
 6. **Moduli degli store**, da compilare nei pannelli: su Google Play "Data safety" e classificazione dei contenuti; su Apple "App Privacy" e l'età. Per un test interno non so quali siano obbligatori già adesso: va visto nei pannelli.
 
 ### Mio, quando mi dai i dati o gli accessi
 
-7. **Firma iOS e caricamento su TestFlight in Codemagic.** Oggi `codemagic.yaml` costruisce iOS con `--no-codesign` e non produce nulla di distribuibile (B9): quando c'è l'account Apple scrivo la parte di firma (chiave API di App Store Connect, certificato e profilo) e l'invio a TestFlight.
+7. **(Rimandato)** **Firma iOS e caricamento su TestFlight in Codemagic.** Oggi `codemagic.yaml` costruisce iOS con `--no-codesign` e non produce nulla di distribuibile (B9): quando c'è l'account Apple scrivo la parte di firma (chiave API di App Store Connect, certificato e profilo) e l'invio a TestFlight.
 8. **Android: invio automatico a Play** (con un account di servizio) dopo il primo caricamento a mano, se lo vuoi.
 9. **Pulizia di B9** (a ogni push su `main` con la stessa versione tag e release vengono ricreati) se vuoi evitarlo.
 10. **L'impronta di Play App Signing** nell'`assetlinks.json` appena me la dai.
