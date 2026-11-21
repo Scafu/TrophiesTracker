@@ -21,6 +21,10 @@ flutter run --dart-define=PROXY_URL=http://127.0.0.1:8787   # app against a loca
 - All tests pass (`flutter test`; the failing counter template `widget_test.dart` was deleted, REVIEW.md B2). Examples of the style: `test/game_remote_data_source_test.dart` (`MockClient`) and `test/app_database_test.dart` (in-memory Drift); run one by path.
 - CI is Codemagic ([codemagic.yaml](codemagic.yaml)): every push to `main` analyzes, runs `flutter test`, builds APK/AAB/iOS, then tags `v<pubspec version>` and publishes a GitHub release (deleting and recreating the tag if it already exists). Bump `version:` in `pubspec.yaml` to cut a new release (the Settings page reads the version from the build with `package_info_plus`, it is not written anywhere else).
 
+## Branches and releases
+
+`main` is what is released: a push to `main` makes Codemagic build, tag `v<pubspec version>` and publish a GitHub release (the repository is public, so the files of that release are public). Unfinished work never goes there directly. Work happens on `develop` (the integration branch) or on a short-lived branch started from it; a PR into `develop` or `main` gets the `checks` workflow (analyze and tests). To release: bump `version:` in `pubspec.yaml` (the `+N` build number must grow with every upload to Google Play), then a PR from `develop` into `main`. A fix for what is released starts from `main` and is merged into both. Nobody pushes to `main` by hand. The repository is public, so `develop` is visible too: the split protects what gets released, not the secrecy of work in progress.
+
 ## Known issues
 
 [REVIEW.md](REVIEW.md) tracks reviewed problems (A = high, M = medium, B = low, V = to verify). Read it before changing the sync, database or login code; when you fix an item, tick it there with the commit, and add new findings under a new ID.
