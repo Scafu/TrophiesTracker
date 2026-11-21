@@ -138,7 +138,7 @@ If you like this project, consider supporting it.
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by default. If you would like to reuse part of the code, please open an issue.
+The code is free software under the [MIT License](LICENSE): use it, change it, share it. The license covers this repository's own code and material; game titles, covers, trophy icons and platform logos belong to their owners (see Legal above).
 
 ---
 
