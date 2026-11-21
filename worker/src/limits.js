@@ -67,12 +67,10 @@ async function hash(text) {
     .join("");
 }
 
-/** Il token di sessione della richiesta (`Authorization: Bearer`, poi `?token=`), o null. */
-function sessionToken(request, url) {
+/** Il token di sessione della richiesta (`Authorization: Bearer`), o null. */
+function sessionToken(request) {
   const auth = request.headers.get("Authorization") || "";
-  const token = auth.startsWith("Bearer ")
-    ? auth.slice(7)
-    : url.searchParams.get("token");
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
   return UUID.test(token || "") ? token : null;
 }
 
@@ -87,7 +85,7 @@ export async function retryAfterSeconds(request, env, url) {
   if (!limiter) return null;
 
   try {
-    const token = tier.byToken ? sessionToken(request, url) : null;
+    const token = tier.byToken ? sessionToken(request) : null;
     const key = token
       ? `t:${await hash(token)}`
       : `ip:${request.headers.get("CF-Connecting-IP") ?? "unknown"}`;

@@ -63,16 +63,14 @@ export default {
     // ==========================================
 
     /**
-     * Legge il token di sessione: prima `Authorization: Bearer`, poi `?token=`
-     * (solo per le versioni dell'app precedenti all'header).
+     * Legge il token di sessione da `Authorization: Bearer`, mai dall'indirizzo
+     * (un token in un URL finisce nei log e nella cronologia).
      * Restituisce null se non ha forma di UUID, così nessun token può mai
      * puntare a chiavi KV che non siano sessioni (es. `privacy-policy`).
      */
     function getToken() {
       const auth = request.headers.get("Authorization") || "";
-      const token = auth.startsWith("Bearer ")
-        ? auth.slice(7)
-        : url.searchParams.get("token");
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
       return UUID.test(token || "") ? token : null;
     }
 
@@ -160,7 +158,7 @@ export default {
         returnTo.origin + returnTo.pathname !== `${url.origin}/auth/steam/callback` ||
         !signed.includes("return_to") ||
         !signed.includes("claimed_id") ||
-        (challenge !== null && !CHALLENGE.test(challenge))
+        !CHALLENGE.test(challenge || "")
       ) {
         return null;
       }
@@ -207,15 +205,10 @@ export default {
 
     if (url.pathname === "/open") {
       const code = url.searchParams.get("code");
-      const token = url.searchParams.get("token");
       // Se l'App Link è verificato Android consegna questo URL https all'app;
       // altrimenti il browser segue il redirect verso il custom scheme.
       if (UUID.test(code || "")) {
         return Response.redirect(`trophiestracker://stats?code=${code}`, 302);
-      }
-      // Solo per le versioni dell'app precedenti al codice monouso.
-      if (UUID.test(token || "")) {
-        return Response.redirect(`trophiestracker://stats?token=${token}`, 302);
       }
       return new Response("Missing code", { status: 400, headers: corsHeaders });
     }
@@ -226,13 +219,13 @@ export default {
 
     if (url.pathname === "/auth/steam") {
       const challenge = url.searchParams.get("challenge");
-      if (challenge !== null && !CHALLENGE.test(challenge)) {
+      if (!CHALLENGE.test(challenge || "")) {
         return new Response("Invalid challenge", { status: 400, headers: corsHeaders });
       }
 
       // La challenge passa dentro il return_to, che Steam firma.
       const returnTo = new URL(`${url.origin}/auth/steam/callback`);
-      if (challenge) returnTo.searchParams.set("c", challenge);
+      returnTo.searchParams.set("c", challenge);
 
       const params = new URLSearchParams({
         "openid.ns": "http://specs.openid.net/auth/2.0",
@@ -254,20 +247,13 @@ export default {
         });
       }
 
-      // Con challenge: all'app va solo un codice monouso, inutile senza il
-      // verifier che l'app non ha mai mandato in giro.
-      if (login.challenge) {
-        const code = crypto.randomUUID();
-        await env.KV.put(`code:${code}`, JSON.stringify(login), {
-          expirationTtl: CODE_TTL,
-        });
-        return Response.redirect(`${url.origin}/open?code=${code}`, 302);
-      }
-
-      // Senza challenge (app precedente): token opaco direttamente nel redirect.
-      const token = crypto.randomUUID();
-      await env.KV.put(token, login.steamId, { expirationTtl: SESSION_TTL });
-      return Response.redirect(`${url.origin}/open?token=${token}`, 302);
+      // All'app va solo un codice monouso, inutile senza il verifier che l'app
+      // non ha mai mandato in giro.
+      const code = crypto.randomUUID();
+      await env.KV.put(`code:${code}`, JSON.stringify(login), {
+        expirationTtl: CODE_TTL,
+      });
+      return Response.redirect(`${url.origin}/open?code=${code}`, 302);
     }
 
     // Scambia il codice monouso con il token di sessione.

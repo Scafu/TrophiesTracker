@@ -154,12 +154,24 @@ test("token exchange: a wrong verifier fails and burns the code", async () => {
   assert.equal((await exchange(VERIFIER)).status, 400);
 });
 
-test("login without a challenge still works for older app versions", async () => {
+test("a login without a challenge is refused, so no token can travel in a redirect", async () => {
+  assert.equal((await call("/auth/steam")).status, 400);
+  assert.equal((await call("/auth/steam?challenge=")).status, 400);
+
   const response = await call(callbackPath({ returnTo: `${ORIGIN}/auth/steam/callback` }));
 
-  const location = new URL(response.headers.get("location"));
-  assert.equal(location.pathname, "/open");
-  assert.equal(kv.store.get(location.searchParams.get("token")), STEAM_ID);
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get("location"), null);
+  assert.deepEqual([...kv.store.keys()], []);
+});
+
+test("/open forwards a code and nothing else: a token in the address is not passed on", async () => {
+  const token = crypto.randomUUID();
+
+  const response = await call(`/open?token=${token}`);
+
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("location"), null);
 });
 
 test("the session token is accepted from the Authorization header", async () => {
@@ -172,9 +184,20 @@ test("the session token is accepted from the Authorization header", async () => 
 });
 
 test("a token that is not a UUID never reaches the KV store", async () => {
-  const response = await call("/user?token=privacy-policy");
+  const response = await call("/user", { headers: { Authorization: "Bearer privacy-policy" } });
 
   assert.equal(response.status, 401);
+  assert.deepEqual(kv.reads, []);
+});
+
+test("a session token in the address is never accepted, even a real one", async () => {
+  const token = await loginForToken();
+  kv.reads.length = 0;
+
+  for (const path of ["/user", "/library", "/playerAchievements?appid=1"]) {
+    const response = await call(`${path}${path.includes("?") ? "&" : "?"}token=${token}`);
+    assert.equal(response.status, 401, path);
+  }
   assert.deepEqual(kv.reads, []);
 });
 

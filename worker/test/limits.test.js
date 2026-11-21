@@ -177,7 +177,6 @@ test("the key is the address of the client, or 'unknown' without one", async () 
 test("with a session the key is a hash of the token, never the token", async () => {
   for (const request of [
     { path: "/user", headers: { Authorization: `Bearer ${SESSION}` } },
-    { path: `/user?token=${SESSION}`, headers: {} },
     { path: "/playerAchievements?appid=1", headers: { Authorization: `Bearer ${SESSION}` } },
   ]) {
     const limiters = bindings();
@@ -199,6 +198,16 @@ test("the same token always gives the same key, and two tokens give two", async 
   const [a, b, c] = limiters.RL_USER.keys;
   assert.equal(a, b);
   assert.notEqual(a, c);
+});
+
+test("a token in the address is not a session: the key is the address", async () => {
+  const limiters = bindings();
+  await call(`/user?token=${SESSION}`, {
+    headers: { "CF-Connecting-IP": "203.0.113.7" },
+    env: environment(limiters),
+  });
+
+  assert.deepEqual(limiters.RL_USER.keys, ["ip:203.0.113.7"]);
 });
 
 test("a token that is not a session falls back to the address", async () => {
