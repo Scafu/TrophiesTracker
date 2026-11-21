@@ -10,13 +10,14 @@ import 'package:trophies_tracker/features/game/presentation/details/cubit/game_d
 import 'package:trophies_tracker/features/game/presentation/details/trophy_view.dart';
 import 'package:trophies_tracker/styles/colors_palette.dart';
 
-/// One trophy: its icon, name, description, when it was unlocked and how rare
-/// it is. Unlocked trophies get a gold tint.
+/// One trophy: its icon, name, description, when it was unlocked, its grade
+/// (PlayStation) and how rare it is. Unlocked trophies get a gold tint.
 ///
-/// What a tap does depends on the game: in a game that is not in the library
-/// and in a game synced from Steam it only explains why nothing changes; in a
-/// manually added game it unlocks or locks the trophy.
-class TrophyTile extends StatelessWidget {
+/// A hidden trophy that is not unlocked shows as "Hidden trophy" until it is
+/// tapped. What a tap does after that depends on the game: in a game that is
+/// not in the library and in a synced game it only explains why nothing
+/// changes; in a manually added game it unlocks or locks the trophy.
+class TrophyTile extends StatefulWidget {
   final Game game;
   final Trophy trophy;
   final bool fromExplorer;
@@ -32,18 +33,31 @@ class TrophyTile extends StatelessWidget {
     super.key,
   });
 
-  bool get _manual => !fromExplorer && !game.isSynced;
+  @override
+  State<TrophyTile> createState() => _TrophyTileState();
+}
+
+class _TrophyTileState extends State<TrophyTile> {
+  bool _revealed = false;
+
+  Game get _game => widget.game;
+  Trophy get _trophy => widget.trophy;
+
+  bool get _manual => !widget.fromExplorer && !_game.isSynced;
+  bool get _masked => _trophy.hidden && !_trophy.isAchieved && !_revealed;
 
   void _onTap(BuildContext context) {
-    if (fromExplorer) {
+    if (_masked) {
+      setState(() => _revealed = true);
+    } else if (widget.fromExplorer) {
       showAppToast(context, 'Add to library to unlock trophies');
-    } else if (game.isSynced) {
+    } else if (_game.isSynced) {
       showAppToast(context, 'Cannot manually unlock trophies for synced games');
     } else {
       context.read<GameDetailsCubit>().toggleTrophy(
-        game.appId,
-        trophy.apiName,
-        trophy.isAchieved,
+        _game.key,
+        _trophy.apiName,
+        _trophy.isAchieved,
       );
     }
   }
@@ -52,16 +66,19 @@ class TrophyTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final unlocked = !fromExplorer && trophy.isAchieved;
-    final showColored = fromExplorer || trophy.isAchieved;
+    final trophy = _trophy;
+    final unlocked = !widget.fromExplorer && trophy.isAchieved;
+    final showColored = widget.fromExplorer || trophy.isAchieved;
     final iconUrl = showColored ? trophy.coloredIcon : trophy.icon;
     final date = trophy.achievedAt;
-    final description = trophy.description ?? '';
-    final percent = rarity;
+    final name = _masked ? 'Hidden trophy' : trophy.displayName;
+    final description = _masked ? 'Tap to reveal' : trophy.description ?? '';
+    final percent = widget.rarity;
+    final type = trophy.type;
 
     final status = unlocked
         ? 'Unlocked${date == null ? '' : ' on ${formatShortDate(date)}'}'
-        : fromExplorer
+        : widget.fromExplorer
         ? ''
         : 'Locked';
 
@@ -70,7 +87,8 @@ class TrophyTile extends StatelessWidget {
       child: Semantics(
         button: true,
         label: [
-          trophy.displayName,
+          name,
+          if (type != null) TrophyTypeChip.label(type),
           status,
           if (percent != null) RarityChip.label(percent),
         ].where((part) => part.isNotEmpty).join('. '),
@@ -97,14 +115,18 @@ class TrophyTile extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  _Icon(url: iconUrl, colored: showColored),
+                  _Icon(
+                    url: _masked ? null : iconUrl,
+                    colored: showColored,
+                    masked: _masked,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          trophy.displayName,
+                          name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -123,13 +145,16 @@ class TrophyTile extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if ((unlocked && date != null) || percent != null) ...[
+                        if (type != null ||
+                            (unlocked && date != null) ||
+                            percent != null) ...[
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
+                              if (type != null) TrophyTypeChip(type: type),
                               if (percent != null) RarityChip(percent: percent),
                               if (unlocked && date != null)
                                 Text(
@@ -163,13 +188,16 @@ class _Icon extends StatelessWidget {
   final String? url;
   final bool colored;
 
-  const _Icon({required this.url, required this.colored});
+  /// A hidden trophy: a lock instead of its art.
+  final bool masked;
+
+  const _Icon({required this.url, required this.colored, this.masked = false});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final placeholder = Icon(
-      Symbols.emoji_events_rounded,
+      masked ? Symbols.lock_rounded : Symbols.emoji_events_rounded,
       color: colored ? ColorsPalette.colorGold : colors.onSurfaceVariant,
     );
 
@@ -292,6 +320,61 @@ class RarityChip extends StatelessWidget {
             const SizedBox(width: 5),
             Text(
               label(percent),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The grade of a PlayStation trophy: a medal in the grade's color and its
+/// name. The name carries the meaning; the color is only a hint.
+class TrophyTypeChip extends StatelessWidget {
+  final TrophyType type;
+
+  const TrophyTypeChip({super.key, required this.type});
+
+  static const _labels = {
+    TrophyType.bronze: 'Bronze',
+    TrophyType.silver: 'Silver',
+    TrophyType.gold: 'Gold',
+    TrophyType.platinum: 'Platinum',
+  };
+
+  static String label(TrophyType type) => _labels[type]!;
+
+  static Color color(TrophyType type) => switch (type) {
+    TrophyType.bronze => const Color(0xFFCD7F32),
+    TrophyType.silver => const Color(0xFF9CA3AF),
+    TrophyType.gold => ColorsPalette.colorGold,
+    TrophyType.platinum => const Color(0xFF38BDF8),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tint = color(type);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Symbols.workspace_premium_rounded, size: 13, color: tint),
+            const SizedBox(width: 4),
+            Text(
+              label(type),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface,
                 fontSize: 11,

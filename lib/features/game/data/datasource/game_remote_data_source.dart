@@ -14,6 +14,7 @@ abstract class GameRemoteDataSource {
   Future<GameModel> getGameByIdRemote(int appId, {String? token});
   Future<Map<int, String>> fetchCovers(List<int> appIds);
   Future<Map<String, double>> fetchRarity(int appId);
+  Future<List<GameModel>> fetchCategory(int tagId);
 }
 
 /// Parses one `/catalog` page (runs in an isolate via `compute`): the apps that
@@ -62,7 +63,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
 
       return jsonList.map((data) {
         return GameModel(
-          appId: data['appId'],
+          code: '${data['appId']}',
           name: data['name'],
           publisher: List<String>.from(data['publisher'] ?? []),
           description: data['description'],
@@ -243,13 +244,39 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
     }
   }
 
+  /// The most popular games with trophies in the Steam genre [tagId], from the
+  /// Worker's `/category`, as models with only id and name. Unlike the
+  /// cosmetic lookups, a failure is thrown: the page needs to say it.
+  @override
+  Future<List<GameModel>> fetchCategory(int tagId) async {
+    final response = await client
+        .get(
+          Uri.parse(
+            '$proxyBaseUrl/category',
+          ).replace(queryParameters: {'tag': '$tagId'}),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw Exception('Category $tagId failed: ${response.statusCode}');
+    }
+
+    return [
+      for (final item in json.decode(response.body) as List<dynamic>)
+        if (item is Map<String, dynamic> &&
+            item['appid'] is int &&
+            item['name'] is String)
+          GameModel(code: '${item['appid']}', name: item['name'] as String),
+    ];
+  }
+
   /// Returns [games] with the covers [fetchCovers] finds for them.
   Future<List<GameModel>> _withCovers(List<GameModel> games) async {
-    final covers = await fetchCovers([for (final game in games) game.appId]);
+    int steamId(GameModel game) => int.parse(game.code);
+    final covers = await fetchCovers([for (final game in games) steamId(game)]);
     return [
       for (final game in games)
-        covers.containsKey(game.appId)
-            ? game.copyWith(libraryImage: covers[game.appId])
+        covers.containsKey(steamId(game))
+            ? game.copyWith(libraryImage: covers[steamId(game)])
             : game,
     ];
   }
@@ -302,7 +329,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
                     'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/$appId/library_600x900_2x.jpg';
 
                 return GameModel(
-                  appId: appId,
+                  code: '$appId',
                   name: name ?? 'Unknown',
                   headerImage: headerImage,
                   libraryImage: libraryImage,
@@ -463,7 +490,7 @@ GameModel _parseAndMergeGameData(Map<String, dynamic> params) {
   }
 
   return GameModel(
-    appId: appId,
+    code: '$appId',
     name: name,
     publisher: publishers,
     description: description,

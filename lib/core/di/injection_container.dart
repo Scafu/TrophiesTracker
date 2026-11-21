@@ -17,6 +17,7 @@ import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_
 import 'package:trophies_tracker/features/game/data/repositories/game_repositories_impl.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_cubit.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/category_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
 import 'package:trophies_tracker/features/settings/data/repositories/settings_repository_impl.dart';
@@ -25,6 +26,14 @@ import 'package:trophies_tracker/features/settings/presentation/cubit/settings_c
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.dart';
 
 final sl = GetIt.instance;
+
+/// The Worker every remote call goes through. To try a Worker that is not
+/// published yet, run it with `wrangler dev` and start the app with
+/// `--dart-define=PROXY_URL=http://127.0.0.1:8787`.
+const _proxyBaseUrl = String.fromEnvironment(
+  'PROXY_URL',
+  defaultValue: 'https://trophiestracker.alessandro-mazzariol04.workers.dev',
+);
 
 Future<void> init() async {
   sl.registerLazySingleton<Logger>(() => logger);
@@ -41,11 +50,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<GameRemoteDataSource>(
-    () => GameRemoteDataSourceImpl(
-      client: sl(),
-      proxyBaseUrl:
-          'https://trophiestracker.alessandro-mazzariol04.workers.dev',
-    ),
+    () => GameRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
   );
 
   sl.registerLazySingleton<GameRepository>(
@@ -71,11 +76,8 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<AccountRemoteDataSource>(
-    () => AccountRemoteDataSourceImpl(
-      client: sl(),
-      proxyBaseUrl:
-          'https://trophiestracker.alessandro-mazzariol04.workers.dev',
-    ),
+    () =>
+        AccountRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
   );
 
   sl.registerLazySingleton<RateRequestLimiter>(() => RateRequestLimiter());
@@ -93,6 +95,8 @@ Future<void> init() async {
   sl.registerFactory(() => GameCubit(sl(), sl(), sl(), sl()));
 
   sl.registerFactory(() => ExploreCubit(sl()));
+
+  sl.registerFactory(() => CategoryCubit(sl()));
 
   sl.registerFactory(() => StatsCubit(sl()));
 

@@ -30,14 +30,12 @@ class _CatalogRepository extends Fake implements GameRepository {
   Future<List<Game>> withCovers(List<Game> games) async {
     await coversGate?.future;
     if (failCovers) throw Exception('offline');
-    return [
-      for (final g in games) g.copyWith(libraryImage: 'cover-${g.appId}'),
-    ];
+    return [for (final g in games) g.copyWith(libraryImage: 'cover-${g.code}')];
   }
 }
 
-const _portal = Game(appId: 400, name: 'Portal');
-const _portal2 = Game(appId: 620, name: 'Portal 2');
+const _portal = Game(code: '400', name: 'Portal');
+const _portal2 = Game(code: '620', name: 'Portal 2');
 
 ({ExploreCubit cubit, List<ExploreState> states}) _setUp(
   _CatalogRepository repository,
@@ -103,7 +101,7 @@ void main() {
       final repository = _CatalogRepository(
         matches: {
           'portal': [_portal],
-          'hades': [const Game(appId: 1145360, name: 'Hades')],
+          'hades': [const Game(code: '1145360', name: 'Hades')],
         },
       )..coversGate = gate;
       final (:cubit, :states) = _setUp(repository);

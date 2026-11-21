@@ -12,7 +12,7 @@ Game _game(
   int id = 1,
 }) {
   return Game(
-    appId: id,
+    code: '$id',
     name: name,
     trophies: [
       for (var i = 0; i < unlockedOn.length; i++)
@@ -37,7 +37,7 @@ void main() {
         _game('Done', [now, now]),
         _game('Half', [now], locked: 1, id: 2),
         _game('Fresh', [], locked: 3, id: 3),
-        const Game(appId: 4, name: 'Empty'),
+        const Game(code: '4', name: 'Empty'),
       ]);
 
       expect(totals, (
@@ -56,40 +56,69 @@ void main() {
     });
   });
 
-  group('unlocksPerMonth', () {
-    test('counts the last months, oldest first, ending with this one', () {
-      final games = [
-        _game('A', [
-          DateTime(2025, 6, 1),
-          DateTime(2025, 6, 9),
-          DateTime(2025, 4, 20),
-        ]),
-        _game('B', [DateTime(2025, 6, 30), DateTime(2024, 12, 1), null], id: 2),
-      ];
+  group('unlocksPerDay', () {
+    final today = DateTime(2025, 6, 18);
 
-      final months = unlocksPerMonth(games, now: now);
+    test('starts on a Monday and ends today', () {
+      final days = unlocksPerDay(const [], weeks: 3, now: today);
 
-      expect(
-        [for (final m in months) (m.month, m.count)],
-        [(1, 0), (2, 0), (3, 0), (4, 1), (5, 0), (6, 3)],
+      expect(days.first.day, DateTime(2025, 6, 2));
+      expect(days.first.day.weekday, DateTime.monday);
+      expect(days.last.day, today);
+      expect(days, hasLength(2 * 7 + today.weekday));
+    });
+
+    test('counts the unlocks of each day and skips the undated ones', () {
+      final days = unlocksPerDay(
+        [
+          _game('A', [
+            DateTime(2025, 6, 18, 9),
+            DateTime(2025, 6, 18, 23, 59),
+            DateTime(2025, 6, 2),
+            null,
+          ]),
+          _game('B', [DateTime(2025, 6, 18)], id: 2),
+        ],
+        weeks: 3,
+        now: today,
       );
-      expect(months.first.year, 2025);
+
+      int on(int day) =>
+          days.firstWhere((d) => d.day == DateTime(2025, 6, day)).count;
+      expect(on(18), 3);
+      expect(on(2), 1);
+      expect(on(3), 0);
+      expect(days.fold(0, (sum, d) => sum + d.count), 4);
+    });
+
+    test('leaves out what is older than the window', () {
+      final days = unlocksPerDay(
+        [
+          _game('A', [DateTime(2025, 1, 1)]),
+        ],
+        weeks: 3,
+        now: today,
+      );
+
+      expect(days.every((d) => d.count == 0), isTrue);
     });
 
     test('crosses the year boundary', () {
-      final months = unlocksPerMonth(
+      final days = unlocksPerDay(
         [
-          _game('A', [DateTime(2024, 12, 5)]),
+          _game('A', [DateTime(2024, 12, 31)]),
         ],
-        months: 3,
-        now: DateTime(2025, 1, 10),
+        weeks: 2,
+        now: DateTime(2025, 1, 2),
       );
 
-      expect(
-        [for (final m in months) (m.year, m.month, m.count)],
-        [(2024, 11, 0), (2024, 12, 1), (2025, 1, 0)],
-      );
+      expect(days.first.day, DateTime(2024, 12, 23));
+      expect(days.firstWhere((d) => d.count == 1).day, DateTime(2024, 12, 31));
     });
+  });
+
+  test('activityLevel grows with the unlocks of the day', () {
+    expect([0, 1, 2, 3, 4, 5, 20].map(activityLevel), [0, 1, 2, 3, 3, 4, 4]);
   });
 
   test('topGames ranks by unlocked trophies, leaving out games with none', () {

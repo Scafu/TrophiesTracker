@@ -5,6 +5,7 @@ import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_
 import 'package:trophies_tracker/features/game/data/models/game_model.dart';
 import 'package:trophies_tracker/features/game/data/models/trophy_model.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 
 /// Implementation of the [GameRepository] that orchestrates data flow
@@ -16,7 +17,7 @@ class GameRepositoriesImpl implements GameRepository {
   /// Where the time of the last Steam sync is kept; without it nothing is.
   final SharedPreferences? sharedPreferences;
   static const _lastSyncKey = 'last_steam_sync';
-  final Map<int, Game> _cachedGames = {};
+  final Map<GameKey, Game> _cachedGames = {};
 
   /// Creates a new instance of [GameRepositoriesImpl].
   GameRepositoriesImpl({
@@ -40,7 +41,7 @@ class GameRepositoriesImpl implements GameRepository {
     return localModels.map((model) => model.toEntity()).toList();
   }
 
-  final Map<int, String> _covers = {};
+  final Map<String, String> _covers = {};
 
   /// Returns [games] with the cover Steam really serves for them.
   ///
@@ -51,36 +52,50 @@ class GameRepositoriesImpl implements GameRepository {
   Future<List<Game>> withCovers(List<Game> games) async {
     final missing = [
       for (final game in games)
-        if (!_covers.containsKey(game.appId)) game.appId,
+        if (game.platform == GamePlatform.steam &&
+            !_covers.containsKey(game.code))
+          int.parse(game.code),
     ];
     if (missing.isNotEmpty) {
       final found = await remoteDataSource.fetchCovers(missing);
       for (final appId in missing) {
-        _covers[appId] = found[appId] ?? '';
+        _covers['$appId'] = found[appId] ?? '';
       }
     }
 
     return [
       for (final game in games)
-        (_covers[game.appId] ?? '').isEmpty
+        game.platform != GamePlatform.steam ||
+                (_covers[game.code] ?? '').isEmpty
             ? game
-            : game.copyWith(libraryImage: _covers[game.appId]),
+            : game.copyWith(libraryImage: _covers[game.code]),
     ];
   }
 
-  final Map<int, Map<String, double>> _rarity = {};
+  /// The popular games with trophies in the Steam genre [tagId]; throws when
+  /// they cannot be fetched.
+  @override
+  Future<List<Game>> getCategoryGames(int tagId) async => [
+    for (final model in await remoteDataSource.fetchCategory(tagId))
+      model.toEntity(),
+  ];
 
-  /// The share of players who unlocked each trophy of [appId], by API name.
+  final Map<GameKey, Map<String, double>> _rarity = {};
+
+  /// The share of players who unlocked each trophy of the game [key], by API
+  /// name. Only Steam needs this lookup: PlayStation sends the rarity with the
+  /// trophies, so any other game has none here.
   ///
   /// Remembered for the session, but only when something was found, so a
   /// failed lookup is retried the next time the page opens.
   @override
-  Future<Map<String, double>> getRarity(int appId) async {
-    final known = _rarity[appId];
+  Future<Map<String, double>> getRarity(GameKey key) async {
+    if (key.platform != GamePlatform.steam) return const {};
+    final known = _rarity[key];
     if (known != null) return known;
 
-    final found = await remoteDataSource.fetchRarity(appId);
-    if (found.isNotEmpty) _rarity[appId] = found;
+    final found = await remoteDataSource.fetchRarity(int.parse(key.code));
+    if (found.isNotEmpty) _rarity[key] = found;
     return found;
   }
 
@@ -152,10 +167,10 @@ class GameRepositoriesImpl implements GameRepository {
     await localDataSource.saveGamesToDb(gameModels);
   }
 
-  /// Deletes a specific game from the local database using its [appId].
+  /// Deletes a specific game from the local database using its [key].
   @override
-  Future<void> deleteGame(int appId) async {
-    await localDataSource.deleteGameFromDb(appId);
+  Future<void> deleteGame(GameKey key) async {
+    await localDataSource.deleteGameFromDb(key);
   }
 
   /// Deletes all games associated with a specific [platformSource] from the local database.
@@ -186,7 +201,8 @@ class GameRepositoriesImpl implements GameRepository {
   /// Converts a [Game] entity into a [GameModel] for local data operations.
   GameModel _mapToModel(Game game) {
     return GameModel(
-      appId: game.appId,
+      platform: game.platform,
+      code: game.code,
       name: game.name,
       publisher: game.publisher,
       description: game.description,
@@ -195,6 +211,8 @@ class GameRepositoriesImpl implements GameRepository {
       addedAt: game.addedAt,
       platformSource: game.platformSource,
       isSynced: game.isSynced,
+      consoles: game.consoles,
+      remoteUpdatedAt: game.remoteUpdatedAt,
       trophies: game.trophies
           .map(
             (t) => TrophyModel(
@@ -205,16 +223,19 @@ class GameRepositoriesImpl implements GameRepository {
               coloredIcon: t.coloredIcon,
               isAchieved: t.isAchieved,
               achievedAt: t.achievedAt,
+              type: t.type,
+              hidden: t.hidden,
+              rarity: t.rarity,
             ),
           )
           .toList(),
     );
   }
 
-  /// Retrieves a specific game from the local database by its [appId].
+  /// Retrieves a specific game from the local database by its [key].
   @override
-  Future<Game> getGameByIdLocal(int appId) async {
-    final gameModel = await localDataSource.getGameByIdLocal(appId);
+  Future<Game> getGameByIdLocal(GameKey key) async {
+    final gameModel = await localDataSource.getGameByIdLocal(key);
     if (gameModel == null) {
       throw Exception('Game not found');
     }
@@ -222,8 +243,8 @@ class GameRepositoriesImpl implements GameRepository {
   }
 
   @override
-  Future<bool> isGameInLibrary(int appId) async {
-    final game = await localDataSource.getGameByIdLocal(appId);
+  Future<bool> isGameInLibrary(GameKey key) async {
+    final game = await localDataSource.getGameByIdLocal(key);
     return game != null;
   }
 
@@ -232,27 +253,30 @@ class GameRepositoriesImpl implements GameRepository {
   ///
   /// Throws an [Exception] if the underlying remote data source operation fails.
   @override
-  Future<Game> getGameByIdRemote(int appId, {String? token}) async {
-    if (token == null && _cachedGames.containsKey(appId)) {
-      return _cachedGames[appId]!;
+  Future<Game> getGameByIdRemote(GameKey key, {String? token}) async {
+    if (key.platform != GamePlatform.steam) {
+      throw UnsupportedError('Only Steam games can be fetched remotely');
+    }
+    if (token == null && _cachedGames.containsKey(key)) {
+      return _cachedGames[key]!;
     }
     final remoteModel = await remoteDataSource.getGameByIdRemote(
-      appId,
+      int.parse(key.code),
       token: token,
     );
     final entity = remoteModel.toEntity();
-    if (token == null) _cachedGames[appId] = entity;
+    if (token == null) _cachedGames[key] = entity;
     return entity;
   }
 
   /// Updates the achievement status of a specific trophy in the local database.
   @override
   Future<void> updateStateTrophy(
-    int appId,
+    GameKey key,
     String trophyName,
     bool status,
   ) async {
-    return await localDataSource.updateStateTrophy(appId, trophyName, status);
+    return await localDataSource.updateStateTrophy(key, trophyName, status);
   }
 
   @override

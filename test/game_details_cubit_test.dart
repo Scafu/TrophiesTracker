@@ -1,3 +1,4 @@
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trophies_tracker/core/domain/repositories/activity_repository.dart';
 import 'package:trophies_tracker/core/services/rate_request_limiter.dart';
@@ -6,7 +7,7 @@ import 'package:trophies_tracker/features/game/domain/repositories/game_reposito
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_state.dart';
 
-const _game = Game(appId: 1, name: 'G');
+const _game = Game(code: '1', name: 'G');
 
 class _DetailsRepository extends Fake implements GameRepository {
   _DetailsRepository({this.failRemote = false});
@@ -15,13 +16,13 @@ class _DetailsRepository extends Fake implements GameRepository {
   int remoteCalls = 0;
 
   @override
-  Future<bool> isGameInLibrary(int appId) async => true;
+  Future<bool> isGameInLibrary(GameKey key) async => true;
 
   @override
-  Future<Game> getGameByIdLocal(int appId) async => _game;
+  Future<Game> getGameByIdLocal(GameKey key) async => _game;
 
   @override
-  Future<Game> getGameByIdRemote(int appId, {String? token}) async {
+  Future<Game> getGameByIdRemote(GameKey key, {String? token}) async {
     remoteCalls++;
     if (failRemote) throw Exception('x');
     return _game;
@@ -51,10 +52,10 @@ void main() {
   test('a failed sync can be retried right away', () async {
     final repository = _DetailsRepository(failRemote: true);
     final (:cubit, :states) = _setUp(repository);
-    await cubit.loadGameDetails(1);
+    await cubit.loadGameDetails(GameKey.steam('1'));
 
-    await cubit.syncAchievements(1, token: 't');
-    await cubit.syncAchievements(1, token: 't');
+    await cubit.syncAchievements(GameKey.steam('1'), token: 't');
+    await cubit.syncAchievements(GameKey.steam('1'), token: 't');
 
     expect(repository.remoteCalls, 2);
     expect(cubit.state, isA<GameDetailsLoaded>());
@@ -63,10 +64,10 @@ void main() {
   test('a rate-limited sync reports it and keeps the page loaded', () async {
     final repository = _DetailsRepository();
     final (:cubit, :states) = _setUp(repository);
-    await cubit.loadGameDetails(1);
+    await cubit.loadGameDetails(GameKey.steam('1'));
 
-    await cubit.syncAchievements(1, token: 't');
-    await cubit.syncAchievements(1, token: 't');
+    await cubit.syncAchievements(GameKey.steam('1'), token: 't');
+    await cubit.syncAchievements(GameKey.steam('1'), token: 't');
     await pumpEventQueue();
 
     expect(repository.remoteCalls, 1);
@@ -82,11 +83,11 @@ void main() {
       final repository = _DetailsRepository();
       final (:cubit, :states) = _setUp(repository);
 
-      await cubit.syncAchievements(1, token: 't');
+      await cubit.syncAchievements(GameKey.steam('1'), token: 't');
       expect(repository.remoteCalls, 0);
 
-      await cubit.loadGameDetails(1);
-      await cubit.syncAchievements(1, token: 't');
+      await cubit.loadGameDetails(GameKey.steam('1'));
+      await cubit.syncAchievements(GameKey.steam('1'), token: 't');
 
       expect(repository.remoteCalls, 1);
     },

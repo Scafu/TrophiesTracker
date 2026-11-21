@@ -17,7 +17,7 @@ class _SteamRemote extends Fake implements GameRemoteDataSource {
   Future<List<GameModel>> fetchGamesFromSteamAccount(String token) async => [
     for (var id = 1; id <= 3; id++)
       GameModel(
-        appId: id,
+        code: '$id',
         name: 'Game $id',
         platformSource: 'steam',
         trophies: [TrophyModel(apiName: 'a', displayName: 'A')],

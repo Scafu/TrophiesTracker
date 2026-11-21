@@ -1,7 +1,9 @@
+import 'package:trophies_tracker/core/router/game_route.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trophies_tracker/core/utils/game/game_completion.dart';
 import 'package:trophies_tracker/core/widgets/completion_badge.dart';
+import 'package:trophies_tracker/core/widgets/console_chip.dart';
 import 'package:trophies_tracker/core/widgets/game_cover.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/library_view.dart';
@@ -9,11 +11,12 @@ import 'package:trophies_tracker/styles/colors_palette.dart';
 
 void _open(BuildContext context, Game game) => context.pushNamed(
   'gameDetails',
-  pathParameters: {'appId': game.appId.toString(), 'fromExplorer': 'false'},
+  pathParameters: gameRouteParams(game.key, fromExplorer: false),
 );
 
 /// A game of the library grid: the cover with its progress along the bottom,
-/// a gold badge once every trophy is unlocked, the name and the trophy count.
+/// a gold badge once every trophy is unlocked, the console of a PlayStation
+/// game, the name and the trophy count.
 class LibraryGameTile extends StatelessWidget {
   final Game game;
 
@@ -40,6 +43,12 @@ class LibraryGameTile extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     GameCover(game: game),
+                    if (game.consoles.isNotEmpty)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: ConsoleChip(ConsoleChip.labelFor(game.consoles)),
+                      ),
                     if (game.isCompleted)
                       const Positioned(
                         top: 6,

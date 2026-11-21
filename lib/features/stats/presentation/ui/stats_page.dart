@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:trophies_tracker/core/widgets/empty_state.dart';
 import 'package:trophies_tracker/core/widgets/section_label.dart';
 import 'package:trophies_tracker/core/widgets/tab_header.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/account_button.dart';
@@ -10,7 +11,6 @@ import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.d
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_state.dart';
 import 'package:trophies_tracker/features/stats/presentation/ui/stats_widgets.dart';
 import 'package:trophies_tracker/features/stats/stats_view.dart';
-import 'package:trophies_tracker/styles/colors_palette.dart';
 
 /// The library in numbers: overall progress, what is completed or under way,
 /// the busiest months, the games with the most trophies and the latest unlocks.
@@ -45,87 +45,41 @@ class _Stats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totals = libraryTotals(games);
-    final months = unlocksPerMonth(games);
+    final days = unlocksPerDay(games);
     final top = topGames(games);
-    final recent = recentUnlocks(games);
+    final recent = recentUnlocks(games, limit: 6);
+    const side = EdgeInsets.symmetric(horizontal: 20);
 
     return CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(child: _Header()),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
           sliver: SliverList.list(
             children: [
-              StatsOverview(totals: totals),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: StatTile(
-                      icon: Symbols.sports_esports_rounded,
-                      value: totals.games,
-                      label: 'Games',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatTile(
-                      icon: Symbols.trophy_rounded,
-                      value: totals.completed,
-                      label: 'Completed',
-                      color: ColorsPalette.colorGold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: StatTile(
-                      icon: Symbols.play_circle_rounded,
-                      value: totals.inProgress,
-                      label: 'In progress',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatTile(
-                      icon: Symbols.hourglass_empty_rounded,
-                      value: totals.notStarted,
-                      label: 'Not started',
-                    ),
-                  ),
-                ],
-              ),
+              StatsHero(totals: totals),
+              const SizedBox(height: 28),
+              LibraryBreakdown(totals: totals),
             ],
           ),
         ),
-        if (months.any((m) => m.count > 0)) ...[
-          const SliverToBoxAdapter(child: SectionLabel('Unlocks per month')),
+        if (days.any((d) => d.count > 0)) ...[
+          const SliverToBoxAdapter(child: SectionLabel('Activity')),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(child: MonthlyChart(months: months)),
+            padding: side,
+            sliver: SliverToBoxAdapter(child: ActivityHeatmap(days: days)),
           ),
         ],
         if (top.isNotEmpty) ...[
           const SliverToBoxAdapter(child: SectionLabel('Most trophies')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(child: TopGamesCard(games: top)),
-          ),
+          SliverToBoxAdapter(child: TopGamesList(games: top)),
         ],
         if (recent.isNotEmpty) ...[
           const SliverToBoxAdapter(child: SectionLabel('Recent unlocks')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: RecentUnlocksCard(unlocks: recent),
-            ),
-          ),
+          SliverToBoxAdapter(child: RecentUnlocksList(unlocks: recent)),
         ],
         SliverToBoxAdapter(
-          child: SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom),
+          child: SizedBox(height: 120 + MediaQuery.paddingOf(context).bottom),
         ),
       ],
     );
@@ -141,6 +95,8 @@ class _Header extends StatelessWidget {
 }
 
 /// The header of the page above [child], for the states with no stats.
+/// [child] gets the space above the floating navigation bar, so what it
+/// centers is not hidden.
 class _UnderHeader extends StatelessWidget {
   final Widget child;
 
@@ -150,7 +106,14 @@ class _UnderHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       const _Header(),
-      Expanded(child: child),
+      Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
+          child: child,
+        ),
+      ),
     ],
   );
 }
@@ -161,41 +124,17 @@ class _NoStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Symbols.bar_chart_rounded,
-            size: 48,
-            color: colors.onSurfaceVariant.withValues(alpha: 0.6),
-          ),
-          const SizedBox(height: 12),
-          Text('No stats yet', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(
-            'Add games to your library and your progress shows up here.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () => context.go('/explore'),
-            icon: const Icon(Symbols.explore_rounded, size: 20),
-            label: const Text('Explore games'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(200, 46),
-              shape: const StadiumBorder(),
-            ),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: Symbols.bar_chart_rounded,
+      title: 'No stats yet',
+      message: 'Add games to your library and your progress shows up here.',
+      actions: [
+        EmptyStateAction.primary(
+          icon: Symbols.explore_rounded,
+          label: 'Explore games',
+          onPressed: () => context.go('/explore'),
+        ),
+      ],
     );
   }
 }

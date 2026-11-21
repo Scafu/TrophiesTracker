@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 
 /// Cover art of a game: the first image that loads from a fallback chain.
 ///
@@ -21,12 +22,13 @@ class GameCover extends StatefulWidget {
 
   /// URL that last loaded for each game, so a tile that is rebuilt (for
   /// example while scrolling) does not request again the images that failed.
-  static final _resolved = <int, String>{};
+  static final _resolved = <GameKey, String>{};
 
   /// Image URLs to try for [game], best first, without duplicates.
   @visibleForTesting
   static List<({String url, bool portrait})> sourcesFor(Game game) {
-    final id = game.appId;
+    final id = game.code;
+    final steam = game.platform == GamePlatform.steam;
     final seen = <String>{};
     final sources = <({String url, bool portrait})>[];
 
@@ -36,11 +38,14 @@ class GameCover extends StatefulWidget {
       }
     }
 
-    add(game.libraryImage, portrait: true);
-    add('$_base/$id/library_600x900.jpg', portrait: true);
+    // Steam art is vertical; a PlayStation icon is square and is shown whole.
+    add(game.libraryImage, portrait: steam);
+    if (steam) add('$_base/$id/library_600x900.jpg', portrait: true);
     add(game.headerImage, portrait: false);
-    add('$_base/$id/header.jpg', portrait: false);
-    add('$_base/$id/capsule_616x353.jpg', portrait: false);
+    if (steam) {
+      add('$_base/$id/header.jpg', portrait: false);
+      add('$_base/$id/capsule_616x353.jpg', portrait: false);
+    }
     return sources;
   }
 
@@ -61,7 +66,7 @@ class _GameCoverState extends State<GameCover> {
   @override
   void didUpdateWidget(GameCover oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.game.appId != widget.game.appId ||
+    if (oldWidget.game.key != widget.game.key ||
         oldWidget.game.libraryImage != widget.game.libraryImage) {
       _load();
     }
@@ -70,7 +75,7 @@ class _GameCoverState extends State<GameCover> {
   void _load() {
     _sources = GameCover.sourcesFor(widget.game);
     final known = _sources.indexWhere(
-      (source) => source.url == GameCover._resolved[widget.game.appId],
+      (source) => source.url == GameCover._resolved[widget.game.key],
     );
     _index = known < 0 ? 0 : known;
   }
@@ -108,7 +113,7 @@ class _GameCoverState extends State<GameCover> {
       errorWidget: (context, url, error) => placeholder,
       errorListener: (_) => _failed(index),
       imageBuilder: (context, image) {
-        GameCover._resolved[widget.game.appId] = source.url;
+        GameCover._resolved[widget.game.key] = source.url;
         return source.portrait
             ? Image(image: image, fit: BoxFit.cover)
             : _Letterboxed(image: image);

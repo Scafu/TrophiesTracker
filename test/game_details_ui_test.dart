@@ -73,12 +73,35 @@ void main() {
   });
 
   group('ExpandableDescription', () {
+    Widget sized(double width, String text) => _host(
+      SizedBox(
+        width: width,
+        child: ExpandableDescription(text: text),
+      ),
+    );
+
     testWidgets('a short text has no toggle', (tester) async {
       await tester.pumpWidget(
         _host(const ExpandableDescription(text: 'Short.')),
       );
 
       expect(find.text('Show more'), findsNothing);
+    });
+
+    testWidgets('a text that fits in three lines has no toggle', (
+      tester,
+    ) async {
+      await tester.pumpWidget(sized(800, 'word ' * 30));
+
+      expect(find.text('Show more'), findsNothing);
+    });
+
+    testWidgets('the same text gets a toggle where it needs more lines', (
+      tester,
+    ) async {
+      await tester.pumpWidget(sized(300, 'word ' * 30));
+
+      expect(find.text('Show more'), findsOneWidget);
     });
 
     testWidgets('a long text can be expanded and collapsed again', (
@@ -95,6 +118,55 @@ void main() {
       await tester.tap(find.text('Show less'));
       await tester.pumpAndSettle();
       expect(find.text('Show more'), findsOneWidget);
+    });
+
+    testWidgets('expanding shows the whole text, not a single line', (
+      tester,
+    ) async {
+      const text = 'Long text. ';
+      await tester.pumpWidget(sized(300, text * 40));
+      final collapsed = tester.getSize(find.textContaining(text)).height;
+
+      await tester.tap(find.text('Show more'));
+      await tester.pumpAndSettle();
+      final expanded = tester.getSize(find.textContaining(text)).height;
+
+      expect(expanded, greaterThan(collapsed));
+
+      await tester.tap(find.text('Show less'));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.textContaining(text)).height, collapsed);
+    });
+
+    testWidgets('a text of two lines is shown whole, with no toggle', (
+      tester,
+    ) async {
+      await tester.pumpWidget(sized(800, 'one'));
+      final oneLine = tester.getSize(find.text('one')).height;
+
+      final twoLines = 'word ' * 20;
+      await tester.pumpWidget(sized(800, twoLines));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.textContaining('word')).height,
+        greaterThan(oneLine),
+      );
+      expect(find.text('Show more'), findsNothing);
+    });
+
+    testWidgets('shows the characters behind the HTML entities', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          const ExpandableDescription(
+            text: 'The &quot;Initiative&quot; &amp; co',
+          ),
+        ),
+      );
+
+      expect(find.text('The "Initiative" & co'), findsOneWidget);
     });
   });
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/trophy.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.dart';
 import 'package:trophies_tracker/features/stats/presentation/ui/stats_page.dart';
@@ -11,6 +12,7 @@ import 'package:trophies_tracker/features/stats/presentation/ui/stats_widgets.da
 import 'package:trophies_tracker/features/stats/stats_view.dart';
 
 import 'helpers/fake_account_cubit.dart';
+import 'helpers/floating_bar.dart';
 
 class _EmptyLibrary extends Fake implements GameRepository {
   @override
@@ -22,12 +24,59 @@ Widget _host(Widget child) => MaterialApp(
 );
 
 void main() {
-  testWidgets('the overview shows the unlocked trophies and the share', (
-    tester,
-  ) async {
+  testWidgets(
+    'the hero shows the unlocked trophies, the share and what is left',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          const StatsHero(
+            totals: (
+              games: 18,
+              completed: 3,
+              inProgress: 9,
+              notStarted: 6,
+              unlocked: 400,
+              total: 1250,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('400'), findsOneWidget);
+      expect(find.text('/ 1,250'), findsOneWidget);
+      expect(find.textContaining('across 18 games'), findsOneWidget);
+      expect(find.text('32%'), findsOneWidget);
+      expect(find.text('850 to go'), findsOneWidget);
+    },
+  );
+
+  testWidgets('the hero copes with a library with no trophies', (tester) async {
     await tester.pumpWidget(
       _host(
-        const StatsOverview(
+        const StatsHero(
+          totals: (
+            games: 1,
+            completed: 0,
+            inProgress: 0,
+            notStarted: 0,
+            unlocked: 0,
+            total: 0,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('0%'), findsOneWidget);
+    expect(find.text('0 to go'), findsOneWidget);
+    expect(find.textContaining('across 1 game'), findsOneWidget);
+  });
+
+  testWidgets('the breakdown counts the three groups of games', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        const LibraryBreakdown(
           totals: (
             games: 18,
             completed: 3,
@@ -39,52 +88,110 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
 
-    expect(find.text('400 trophies'), findsOneWidget);
-    expect(find.textContaining('out of 1,250'), findsOneWidget);
-    expect(find.textContaining('18 games'), findsOneWidget);
-    expect(find.text('32%'), findsOneWidget);
+    for (final label in ['Completed', 'In progress', 'Not started']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('9'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
   });
 
-  testWidgets('a tile shows the number, its label and an icon', (tester) async {
-    await tester.pumpWidget(
-      _host(
-        const StatTile(
-          icon: Symbols.trophy_rounded,
-          value: 1234,
-          label: 'Completed',
-        ),
-      ),
-    );
-
-    expect(find.text('1,234'), findsOneWidget);
-    expect(find.text('Completed'), findsOneWidget);
-    expect(find.byIcon(Symbols.trophy_rounded), findsOneWidget);
-  });
-
-  testWidgets('the chart labels every month and counts the busy ones', (
+  testWidgets('the breakdown draws an empty bar when there is nothing', (
     tester,
   ) async {
     await tester.pumpWidget(
       _host(
-        const MonthlyChart(
-          months: [
-            (year: 2025, month: 1, count: 0),
-            (year: 2025, month: 2, count: 4),
-            (year: 2025, month: 3, count: 9),
-          ],
+        const LibraryBreakdown(
+          totals: (
+            games: 0,
+            completed: 0,
+            inProgress: 0,
+            notStarted: 0,
+            unlocked: 0,
+            total: 0,
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
 
-    for (final month in ['Jan', 'Feb', 'Mar']) {
-      expect(find.text(month), findsOneWidget);
-    }
-    expect(find.text('9'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
-    expect(find.text('0'), findsNothing);
+    expect(tester.takeException(), isNull);
+    expect(find.text('0'), findsNWidgets(3));
+  });
+
+  group('the activity heatmap', () {
+    final days = unlocksPerDay(
+      [
+        Game(
+          code: '1',
+          name: 'A',
+          trophies: [
+            Trophy(
+              apiName: 'a',
+              displayName: 'a',
+              isAchieved: true,
+              achievedAt: DateTime(2025, 6, 17),
+            ),
+            Trophy(
+              apiName: 'b',
+              displayName: 'b',
+              isAchieved: true,
+              achievedAt: DateTime(2025, 6, 18),
+            ),
+          ],
+        ),
+      ],
+      weeks: 20,
+      now: DateTime(2025, 6, 18),
+    );
+
+    testWidgets('sums up the unlocks and the active days', (tester) async {
+      await tester.pumpWidget(_host(ActivityHeatmap(days: days)));
+
+      expect(find.text('2 unlocks · 2 active days'), findsOneWidget);
+      expect(find.text('Less'), findsOneWidget);
+      expect(find.text('More'), findsOneWidget);
+    });
+
+    testWidgets('labels the months along the weeks', (tester) async {
+      await tester.pumpWidget(_host(ActivityHeatmap(days: days)));
+
+      for (final month in ['Feb', 'Mar', 'Apr', 'May', 'Jun']) {
+        expect(find.text(month), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('fits a narrow phone without overflowing', (tester) async {
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ActivityHeatmap(days: days),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(ActivityHeatmap)).width, 280);
+    });
+
+    test('drops a first label that has no room before the next month', () {
+      final starts = ActivityHeatmap.monthStarts(
+        unlocksPerDay(const [], weeks: 20, now: DateTime(2025, 6, 18)),
+      );
+
+      expect(starts.first, greaterThanOrEqualTo(0));
+      for (var i = 1; i < starts.length; i++) {
+        expect(starts[i] - starts[i - 1], greaterThanOrEqualTo(3));
+      }
+    });
   });
 
   testWidgets('with no games the page says there is nothing to count yet', (
@@ -115,14 +222,36 @@ void main() {
     expect(find.text('Explore games'), findsOneWidget);
   });
 
-  test('months of the chart come from the library', () {
-    expect(
-      unlocksPerMonth(
-        const [],
-        months: 4,
-        now: DateTime(2025, 2, 1),
-      ).map((m) => m.month),
-      [11, 12, 1, 2],
+  testWidgets('the empty stats are centered above the floating bar', (
+    tester,
+  ) async {
+    final stats = StatsCubit(_EmptyLibrary());
+    final accounts = FakeAccountCubit();
+    addTearDown(stats.close);
+    addTearDown(accounts.close);
+
+    await tester.pumpWidget(
+      underFloatingBar(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<StatsCubit>.value(value: stats),
+            BlocProvider<AccountCubit>.value(value: accounts),
+          ],
+          child: const StatsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expectCenteredInFreeSpace(
+      tester,
+      first: find
+          .ancestor(
+            of: find.byIcon(Symbols.bar_chart_rounded),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+      last: buttonLabeled('Explore games'),
     );
   });
 }

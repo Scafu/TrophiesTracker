@@ -4,7 +4,7 @@ import 'package:trophies_tracker/features/game/domain/entities/game.dart';
 import 'package:trophies_tracker/features/game/domain/entities/trophy.dart';
 
 Game _game(List<bool> unlocked) => Game(
-  appId: 1,
+  code: '1',
   name: 'G',
   trophies: [
     for (var i = 0; i < unlocked.length; i++)

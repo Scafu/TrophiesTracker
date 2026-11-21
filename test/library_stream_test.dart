@@ -20,7 +20,7 @@ void main() {
 
       await ds.saveGameToDb(
         const GameModel(
-          appId: 1,
+          code: '1',
           name: 'G',
           trophies: [TrophyModel(apiName: 'a', displayName: 'A')],
         ),

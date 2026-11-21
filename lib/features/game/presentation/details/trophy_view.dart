@@ -16,6 +16,17 @@ RarityTier rarityTier(double percent) {
   return RarityTier.common;
 }
 
+/// The rarity of each trophy by API name: what the trophies carry (PlayStation
+/// sends it with them) with [fetched] over it (Steam's separate lookup).
+Map<String, double> rarityOf(
+  List<Trophy> trophies,
+  Map<String, double> fetched,
+) => {
+  for (final trophy in trophies)
+    if (trophy.rarity != null) trophy.apiName: trophy.rarity!,
+  ...fetched,
+};
+
 typedef TrophyGroups = ({List<Trophy> unlocked, List<Trophy> locked});
 
 /// Keeps the trophies matching [query] (in name or description) and [filter],

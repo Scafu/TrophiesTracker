@@ -1,5 +1,6 @@
 import 'package:trophies_tracker/core/utils/game/game_completion.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 
 enum LibraryFilter { all, inProgress, completed, notStarted }
 
@@ -35,7 +36,7 @@ bool _matches(Game game, LibraryFilter filter) {
 }
 
 /// Keeps the games that match [filter] and whose name contains [query], and
-/// sorts them by [sort]. Ties are broken by name and then by appId, so the
+/// sorts them by [sort]. Ties are broken by name and then by key, so the
 /// order never depends on how the games happen to be stored.
 ///
 /// Sorting by trophies left puts the games with the fewest left first and
@@ -55,7 +56,7 @@ List<Game> arrangeLibrary(
 
   int byName(Game a, Game b) {
     final byText = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    return byText != 0 ? byText : a.appId.compareTo(b.appId);
+    return byText != 0 ? byText : compareGameKeys(a.key, b.key);
   }
 
   int primary(Game a, Game b) {

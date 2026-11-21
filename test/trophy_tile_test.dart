@@ -1,3 +1,4 @@
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,14 +18,14 @@ class _Repository extends Fake implements GameRepository {
   final toggles = <(String, bool)>[];
 
   @override
-  Future<bool> isGameInLibrary(int appId) async => true;
+  Future<bool> isGameInLibrary(GameKey key) async => true;
 
   @override
-  Future<Game> getGameByIdLocal(int appId) async => game;
+  Future<Game> getGameByIdLocal(GameKey key) async => game;
 
   @override
   Future<void> updateStateTrophy(
-    int appId,
+    GameKey key,
     String trophyName,
     bool status,
   ) async => toggles.add((trophyName, status));
@@ -51,8 +52,15 @@ Future<_Repository> _pump(
   bool synced = false,
   bool fromExplorer = false,
   double? rarity,
+  GamePlatform platform = GamePlatform.steam,
 }) async {
-  final game = Game(appId: 1, name: 'G', isSynced: synced, trophies: [trophy]);
+  final game = Game(
+    platform: platform,
+    code: '1',
+    name: 'G',
+    isSynced: synced,
+    trophies: [trophy],
+  );
   final repository = _Repository(game);
   final cubit = GameDetailsCubit(
     repository,
@@ -60,7 +68,7 @@ Future<_Repository> _pump(
     _Activities(),
   );
   addTearDown(cubit.close);
-  await cubit.loadGameDetails(1);
+  await cubit.loadGameDetails(game.key);
 
   await tester.pumpWidget(
     MaterialApp(
@@ -153,6 +161,113 @@ void main() {
       findsOneWidget,
     );
     handle.dispose();
+  });
+
+  group('PlayStation trophies', () {
+    const hidden = Trophy(
+      apiName: 'h',
+      displayName: 'Secret Ending',
+      description: 'Spoils the story',
+      hidden: true,
+      type: TrophyType.gold,
+    );
+
+    testWidgets('show their grade next to the rarity', (tester) async {
+      await _pump(
+        tester,
+        trophy: const Trophy(
+          apiName: 'p',
+          displayName: 'Platinum',
+          type: TrophyType.platinum,
+        ),
+        synced: true,
+        rarity: 1.2,
+        platform: GamePlatform.psn,
+      );
+
+      expect(find.text('Platinum'), findsNWidgets(2));
+      expect(find.text('1.2% · Ultra rare'), findsOneWidget);
+    });
+
+    testWidgets('a trophy with no grade, like Steam\'s, shows none', (
+      tester,
+    ) async {
+      await _pump(tester, trophy: _locked, synced: true);
+
+      expect(find.byIcon(Symbols.workspace_premium_rounded), findsNothing);
+    });
+
+    testWidgets('a hidden trophy not yet earned does not show what it is', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        trophy: hidden,
+        synced: true,
+        platform: GamePlatform.psn,
+      );
+
+      expect(find.text('Hidden trophy'), findsOneWidget);
+      expect(find.text('Tap to reveal'), findsOneWidget);
+      expect(find.text('Secret Ending'), findsNothing);
+      expect(find.text('Spoils the story'), findsNothing);
+      expect(find.byIcon(Symbols.lock_rounded), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Secret Ending')), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('a tap reveals it, and the next tap explains as usual', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        trophy: hidden,
+        synced: true,
+        platform: GamePlatform.psn,
+      );
+
+      await _tap(tester);
+
+      expect(find.text('Secret Ending'), findsOneWidget);
+      expect(find.text('Spoils the story'), findsOneWidget);
+      expect(find.text('Hidden trophy'), findsNothing);
+      expect(
+        find.text('Cannot manually unlock trophies for synced games'),
+        findsNothing,
+      );
+
+      await _tap(tester);
+
+      expect(
+        find.text('Cannot manually unlock trophies for synced games'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a hidden trophy that is earned shows its name', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        trophy: hidden.copyWith(isAchieved: true),
+        synced: true,
+        platform: GamePlatform.psn,
+      );
+
+      expect(find.text('Secret Ending'), findsOneWidget);
+      expect(find.text('Hidden trophy'), findsNothing);
+    });
+  });
+
+  test('the grades have a name and a color of their own', () {
+    expect(TrophyType.values.map(TrophyTypeChip.label), [
+      'Bronze',
+      'Silver',
+      'Gold',
+      'Platinum',
+    ]);
+    expect(TrophyType.values.map(TrophyTypeChip.color).toSet(), hasLength(4));
   });
 
   test('rarity labels read as a percentage and a tier', () {

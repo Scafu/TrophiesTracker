@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
@@ -46,26 +47,47 @@ String _fieldText(WidgetTester tester) =>
     tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
 void main() {
-  testWidgets('before any search it explains the page and suggests titles', (
+  testWidgets('before any search it shows a tile for each category', (
     tester,
   ) async {
     await _open(tester);
 
-    expect(find.text('Find any Steam game'), findsOneWidget);
-    expect(find.text('Elden Ring'), findsOneWidget);
+    expect(find.text('BROWSE BY CATEGORY'), findsOneWidget);
+    expect(find.text('Action'), findsOneWidget);
+    expect(find.text('RPG'), findsOneWidget);
     expect(find.byIcon(Symbols.cancel_rounded), findsNothing);
   });
 
-  testWidgets('tapping a suggestion fills the field and searches it', (
-    tester,
-  ) async {
-    final repository = await _open(tester);
+  testWidgets('tapping a category opens it', (tester) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => MultiBlocProvider(
+            providers: [
+              BlocProvider<ExploreCubit>.value(
+                value: ExploreCubit(_EmptyCatalog()),
+              ),
+              BlocProvider<AccountCubit>.value(value: FakeAccountCubit()),
+            ],
+            child: const Scaffold(body: ExplorePage()),
+          ),
+        ),
+        GoRoute(
+          name: 'category',
+          path: '/category/:tagId',
+          builder: (context, state) =>
+              Text('category ${state.pathParameters['tagId']}'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
-    await tester.tap(find.text('Hades'));
+    await tester.tap(find.text('RPG'));
     await tester.pumpAndSettle();
 
-    expect(_fieldText(tester), 'Hades');
-    expect(repository.searched, ['Hades']);
+    expect(find.text('category 122'), findsOneWidget);
   });
 
   testWidgets('typing searches once, after a short pause', (tester) async {
@@ -106,6 +128,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_fieldText(tester), isEmpty);
-    expect(find.text('Find any Steam game'), findsOneWidget);
+    expect(find.text('BROWSE BY CATEGORY'), findsOneWidget);
   });
 }

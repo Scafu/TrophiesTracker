@@ -3,13 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trophies_tracker/core/di/injection_container.dart';
+import 'package:trophies_tracker/core/router/game_route.dart';
 import 'package:trophies_tracker/core/utils/splash/splash_screen.dart';
 import 'package:trophies_tracker/core/widgets/app_navigation_bar.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/account_page.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/credits_page.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/details/ui/game_details_page.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/categories.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/category_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_cubit.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/ui/category_page.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/ui/explore_page.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/ui/game_page.dart';
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.dart';
@@ -83,6 +88,27 @@ class AppRouter {
         ],
       ),
 
+      /// Route for the popular games of one Steam genre.
+      GoRoute(
+        name: 'category',
+        path: '/category/:tagId',
+        builder: (BuildContext context, GoRouterState state) {
+          final category = categoryById(
+            int.tryParse(state.pathParameters['tagId'] ?? '') ?? -1,
+          );
+          if (category == null) {
+            return const Scaffold(
+              body: Center(child: Text('Category not found')),
+            );
+          }
+
+          return BlocProvider<CategoryCubit>(
+            create: (_) => sl<CategoryCubit>()..load(category.tagId),
+            child: CategoryPage(category: category),
+          );
+        },
+      ),
+
       /// Route for the account page.
       GoRoute(
         path: '/accounts',
@@ -93,9 +119,17 @@ class AppRouter {
       /// Route for offline game details.
       GoRoute(
         name: 'gameDetails',
-        path: '/gamesDetails/:appId/:fromExplorer',
+        path: '/gamesDetails/:platform/:code/:fromExplorer',
         pageBuilder: (BuildContext context, GoRouterState state) {
-          final int appId = int.parse(state.pathParameters['appId']!);
+          final GameKey? game = gameKeyFromRoute(state.pathParameters);
+          if (game == null) {
+            return NoTransitionPage<void>(
+              key: state.pageKey,
+              child: const Scaffold(
+                body: Center(child: Text('Game not found')),
+              ),
+            );
+          }
           final bool fromExplorer = bool.parse(
             state.pathParameters['fromExplorer']!,
           );
@@ -103,11 +137,8 @@ class AppRouter {
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: BlocProvider<GameDetailsCubit>(
-              create: (_) => sl<GameDetailsCubit>()..loadGameDetails(appId),
-              child: GameDetailsPage(
-                gameAppId: appId,
-                fromExplore: fromExplorer,
-              ),
+              create: (_) => sl<GameDetailsCubit>()..loadGameDetails(game),
+              child: GameDetailsPage(gameKey: game, fromExplore: fromExplorer),
             ),
             transitionsBuilder:
                 (

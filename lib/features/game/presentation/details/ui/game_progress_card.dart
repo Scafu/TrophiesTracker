@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:trophies_tracker/core/utils/html_entities.dart';
 import 'package:trophies_tracker/core/utils/time/time_format.dart';
 import 'package:trophies_tracker/core/widgets/completion_ring.dart';
 import 'package:trophies_tracker/features/game/domain/entities/trophy.dart';
@@ -170,7 +171,11 @@ class ExplorerCard extends StatelessWidget {
   }
 }
 
-/// A game description cut to three lines, with a toggle when it is long.
+/// A game description cut to three lines, with a toggle only when the text
+/// really is longer than that at the width it is shown in.
+///
+/// Without a line limit the text must not ask for an ellipsis: a [Text] with
+/// `overflow: ellipsis` and no `maxLines` is cut to a single line.
 class ExpandableDescription extends StatefulWidget {
   final String text;
 
@@ -181,38 +186,63 @@ class ExpandableDescription extends StatefulWidget {
 }
 
 class _ExpandableDescriptionState extends State<ExpandableDescription> {
-  static const _longerThan = 140;
+  static const _collapsedLines = 3;
   bool _expanded = false;
+
+  /// Whether [text] needs more than [_collapsedLines] lines in [width].
+  bool _overflows(
+    BuildContext context,
+    String text,
+    TextStyle? style,
+    double width,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: _collapsedLines,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: width);
+    final overflows = painter.didExceedMaxLines;
+    painter.dispose();
+    return overflows;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final long = widget.text.length > _longerThan;
+    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.4);
+    final text = decodeHtmlEntities(widget.text);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          alignment: Alignment.topCenter,
-          child: Text(
-            widget.text,
-            maxLines: _expanded || !long ? null : 3,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
-          ),
-        ),
-        if (long)
-          TextButton(
-            onPressed: () => setState(() => _expanded = !_expanded),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(48, 36),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final long = _overflows(context, text, style, constraints.maxWidth);
+        final showAll = _expanded || !long;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              alignment: Alignment.topCenter,
+              child: Text(
+                text,
+                maxLines: showAll ? null : _collapsedLines,
+                overflow: showAll ? TextOverflow.clip : TextOverflow.ellipsis,
+                style: style,
+              ),
             ),
-            child: Text(_expanded ? 'Show less' : 'Show more'),
-          ),
-      ],
+            if (long)
+              TextButton(
+                onPressed: () => setState(() => _expanded = !_expanded),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(48, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(_expanded ? 'Show less' : 'Show more'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

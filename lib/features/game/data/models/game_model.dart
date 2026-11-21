@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:trophies_tracker/features/game/data/models/trophy_model.dart';
 
 part 'game_model.freezed.dart';
@@ -10,8 +11,11 @@ part 'game_model.g.dart';
 abstract class GameModel with _$GameModel {
   const GameModel._();
 
+  GameKey get key => GameKey(platform, code);
+
   const factory GameModel({
-    required int appId,
+    @Default(GamePlatform.steam) GamePlatform platform,
+    required String code,
     required String name,
     String? headerImage,
     String? libraryImage,
@@ -21,6 +25,8 @@ abstract class GameModel with _$GameModel {
     DateTime? addedAt,
     @Default("local") String platformSource,
     @Default(false) bool isSynced,
+    @Default([]) List<String> consoles,
+    DateTime? remoteUpdatedAt,
   }) = _GameModel;
 
   factory GameModel.fromJson(Map<String, dynamic> json) =>
@@ -28,7 +34,8 @@ abstract class GameModel with _$GameModel {
 
   Game toEntity() {
     return Game(
-      appId: appId,
+      platform: platform,
+      code: code,
       name: name,
       headerImage: headerImage,
       libraryImage: libraryImage,
@@ -38,6 +45,8 @@ abstract class GameModel with _$GameModel {
       addedAt: addedAt,
       platformSource: platformSource,
       isSynced: isSynced,
+      consoles: consoles,
+      remoteUpdatedAt: remoteUpdatedAt,
     );
   }
 }

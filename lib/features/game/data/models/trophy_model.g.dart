@@ -16,6 +16,9 @@ _TrophyModel _$TrophyModelFromJson(Map<String, dynamic> json) => _TrophyModel(
   achievedAt: json['achievedAt'] == null
       ? null
       : DateTime.parse(json['achievedAt'] as String),
+  type: $enumDecodeNullable(_$TrophyTypeEnumMap, json['type']),
+  hidden: json['hidden'] as bool? ?? false,
+  rarity: (json['rarity'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$TrophyModelToJson(_TrophyModel instance) =>
@@ -27,4 +30,14 @@ Map<String, dynamic> _$TrophyModelToJson(_TrophyModel instance) =>
       'coloredIcon': instance.coloredIcon,
       'isAchieved': instance.isAchieved,
       'achievedAt': instance.achievedAt?.toIso8601String(),
+      'type': _$TrophyTypeEnumMap[instance.type],
+      'hidden': instance.hidden,
+      'rarity': instance.rarity,
     };
+
+const _$TrophyTypeEnumMap = {
+  TrophyType.bronze: 'bronze',
+  TrophyType.silver: 'silver',
+  TrophyType.gold: 'gold',
+  TrophyType.platinum: 'platinum',
+};

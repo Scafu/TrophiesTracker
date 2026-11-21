@@ -6,6 +6,7 @@ import 'package:trophies_tracker/core/widgets/app_toast.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_state.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:trophies_tracker/features/game/domain/entities/trophy.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_state.dart';
@@ -19,14 +20,14 @@ import 'package:trophies_tracker/features/game/presentation/details/ui/trophy_ti
 /// the list of trophies with filter, search, sort and rarity.
 class GameDetailsPage extends StatefulWidget {
   /// The unique application identifier for the game.
-  final int gameAppId;
+  final GameKey gameKey;
 
   /// Indicates whether the user navigated from the explore page.
   final bool fromExplore;
 
   /// Creates a [GameDetailsPage].
   const GameDetailsPage({
-    required this.gameAppId,
+    required this.gameKey,
     this.fromExplore = true,
     super.key,
   });
@@ -61,7 +62,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
   /// or if it never does, the list simply shows no rarity.
   Future<void> _loadRarity() async {
     final rarity = await context.read<GameDetailsCubit>().fetchRarity(
-      widget.gameAppId,
+      widget.gameKey,
     );
     if (mounted && rarity.isNotEmpty) setState(() => _rarity = rarity);
   }
@@ -115,12 +116,13 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
 
   Widget _content(BuildContext context, Game game, bool isSyncing) {
     final explorer = _fromExplore;
+    final rarity = rarityOf(game.trophies, _rarity);
     final groups = arrangeTrophies(
       game.trophies,
       filter: explorer ? TrophyFilter.all : _filter,
       query: _search.text,
       sort: _sort,
-      rarity: _rarity,
+      rarity: rarity,
     );
     final description = game.description ?? '';
 
@@ -160,7 +162,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
             onClearQuery: () => setState(_search.clear),
             sort: _sort,
             onSort: (sort) => setState(() => _sort = sort),
-            rarityAvailable: _rarity.isNotEmpty,
+            rarityAvailable: rarity.isNotEmpty,
           ),
         ),
         if (game.trophies.isEmpty)
@@ -184,6 +186,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
 
   /// A heading with the count, then the trophies of the group.
   List<Widget> _section(String title, List<Trophy> trophies, Game game) {
+    final rarity = rarityOf(game.trophies, _rarity);
     return [
       SliverToBoxAdapter(
         child: Padding(
@@ -206,7 +209,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
             game: game,
             trophy: trophies[index],
             fromExplorer: _fromExplore,
-            rarity: _rarity[trophies[index].apiName],
+            rarity: rarity[trophies[index].apiName],
           ),
         ),
       ),
@@ -214,7 +217,10 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
   }
 
   /// The buttons of the app bar, which depend on whether the game is in the
-  /// library and whether it is synced from Steam.
+  /// library and whether it is synced from Steam (a PlayStation game is synced
+  /// from the account page, so it only gets the delete button). A game still
+  /// to be added has none: the card under the header already has the button to
+  /// add it.
   List<GlassAction> _actions(BuildContext context, Game game, bool isSyncing) {
     final delete = GlassAction(
       icon: Symbols.delete_rounded,
@@ -222,16 +228,8 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
       onPressed: () => _showDeleteDialog(context, game),
     );
 
-    if (_fromExplore) {
-      return [
-        GlassAction(
-          icon: Symbols.add_rounded,
-          tooltip: 'Add to library',
-          onPressed: () => _showAddDialog(context, game),
-        ),
-      ];
-    }
-    if (!game.isSynced) return [delete];
+    if (_fromExplore) return const [];
+    if (!game.isSynced || game.platform != GamePlatform.steam) return [delete];
 
     return [
       GlassAction(
@@ -246,12 +244,12 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
           );
 
           if (token == null) {
-            showAppToast(context, 'Log in to sync achievements from Steam.');
+            showAppToast(context, 'Link your Steam account to sync achievements.');
             return;
           }
 
           context.read<GameDetailsCubit>().syncAchievements(
-            game.appId,
+            game.key,
             token: token,
           );
         },
@@ -276,7 +274,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<GameDetailsCubit>().deleteGame(game.appId);
+              context.read<GameDetailsCubit>().deleteGame(game.key);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),

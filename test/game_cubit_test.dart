@@ -15,7 +15,7 @@ class _SyncRepository extends Fake implements GameRepository {
 
   @override
   Stream<List<Game>> watchLibrary() =>
-      Stream.value(const [Game(appId: 1, name: 'G')]);
+      Stream.value(const [Game(code: '1', name: 'G')]);
 
   @override
   Future<int> fetchGamesFromSteamAccount(String token) {

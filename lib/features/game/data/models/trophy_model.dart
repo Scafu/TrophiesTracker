@@ -16,6 +16,9 @@ abstract class TrophyModel with _$TrophyModel {
     String? coloredIcon,
     @Default(false) bool isAchieved,
     DateTime? achievedAt,
+    TrophyType? type,
+    @Default(false) bool hidden,
+    double? rarity,
   }) = _TrophyModel;
 
   factory TrophyModel.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +33,9 @@ abstract class TrophyModel with _$TrophyModel {
       coloredIcon: coloredIcon,
       isAchieved: isAchieved,
       achievedAt: achievedAt,
+      type: type,
+      hidden: hidden,
+      rarity: rarity,
     );
   }
 }

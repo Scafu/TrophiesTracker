@@ -5,15 +5,18 @@ import 'package:rxdart/rxdart.dart';
 import 'package:trophies_tracker/core/database/app_database.dart';
 import 'package:trophies_tracker/features/game/data/models/game_model.dart';
 import 'package:trophies_tracker/features/game/data/models/trophy_model.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
+import 'package:trophies_tracker/features/game/domain/entities/trophy.dart'
+    show TrophyType;
 
 abstract class GameLocalDataSource {
   Future<List<GameModel>> fetchGamesFromDb();
   Future<void> saveGameToDb(GameModel game);
   Future<void> saveGamesToDb(List<GameModel> games);
-  Future<void> deleteGameFromDb(int appId);
+  Future<void> deleteGameFromDb(GameKey key);
   Future<void> deleteGamesFromDb(String source, {bool onlySynced = false});
-  Future<GameModel?> getGameByIdLocal(int appId);
-  Future<void> updateStateTrophy(int appId, String trophyName, bool status);
+  Future<GameModel?> getGameByIdLocal(GameKey key);
+  Future<void> updateStateTrophy(GameKey key, String trophyName, bool status);
   Stream<List<GameModel>> watchLibrary();
   Future<List<GameModel>> searchInLocalCatalog(String query, {int limit});
   Future<int> getLastCatalogAppId();
@@ -27,42 +30,61 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
 
   GameLocalDataSourceImpl(this.db);
 
+  GameKey _keyOf(String platform, String code) =>
+      GameKey(GamePlatform.values.byName(platform), code);
+
+  /// Whether the two columns hold the platform and the code of [key].
+  Expression<bool> _isGame(
+    GeneratedColumn<String> platform,
+    GeneratedColumn<String> code,
+    GameKey key,
+  ) => platform.equals(key.platform.name) & code.equals(key.code);
+
+  TrophyModel _trophyModel(Trophy row) => TrophyModel(
+    apiName: row.apiName,
+    displayName: row.displayName,
+    description: row.description,
+    icon: row.icon,
+    coloredIcon: row.coloredIcon,
+    isAchieved: row.isAchieved,
+    achievedAt: row.achievedAt,
+    type: TrophyType.values.asNameMap()[row.type],
+    hidden: row.hidden,
+    rarity: row.rarity,
+  );
+
+  GameModel _gameModel(Game row, List<TrophyModel> trophies) => GameModel(
+    platform: GamePlatform.values.byName(row.platform),
+    code: row.code,
+    name: row.name,
+    publisher: row.publisher ?? [],
+    description: row.description,
+    headerImage: row.headerImage,
+    libraryImage: row.libraryImage,
+    addedAt: row.addedAt,
+    platformSource: row.platformSource,
+    isSynced: row.isSynced,
+    consoles: row.consoles ?? [],
+    remoteUpdatedAt: row.remoteUpdatedAt,
+    trophies: trophies,
+  );
+
   @override
   Future<List<GameModel>> fetchGamesFromDb() async {
     final gamesData = await db.select(db.games).get();
     final trophiesData = await db.select(db.trophies).get();
 
-    final Map<int, List<TrophyModel>> trophiesMap = {};
+    final Map<GameKey, List<TrophyModel>> trophiesMap = {};
     for (final t in trophiesData) {
       trophiesMap
-          .putIfAbsent(t.gameId, () => [])
-          .add(
-            TrophyModel(
-              apiName: t.apiName,
-              displayName: t.displayName,
-              description: t.description,
-              icon: t.icon,
-              coloredIcon: t.coloredIcon,
-              isAchieved: t.isAchieved,
-              achievedAt: t.achievedAt,
-            ),
-          );
+          .putIfAbsent(_keyOf(t.gamePlatform, t.gameCode), () => [])
+          .add(_trophyModel(t));
     }
 
-    return gamesData.map((g) {
-      return GameModel(
-        appId: g.appId,
-        name: g.name,
-        publisher: g.publisher ?? [],
-        description: g.description,
-        headerImage: g.headerImage,
-        libraryImage: g.libraryImage,
-        addedAt: g.addedAt,
-        platformSource: g.platformSource,
-        isSynced: g.isSynced,
-        trophies: trophiesMap[g.appId] ?? [],
-      );
-    }).toList();
+    return [
+      for (final g in gamesData)
+        _gameModel(g, trophiesMap[_keyOf(g.platform, g.code)] ?? []),
+    ];
   }
 
   @override
@@ -73,7 +95,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       final gameCompanions = games
           .map(
             (game) => GamesCompanion.insert(
-              appId: Value(game.appId),
+              platform: game.platform.name,
+              code: game.code,
               name: game.name,
               publisher: Value(game.publisher),
               description: Value(game.description),
@@ -82,6 +105,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
               addedAt: Value(game.addedAt),
               platformSource: Value(game.platformSource),
               isSynced: Value(game.isSynced),
+              consoles: Value(game.consoles),
+              remoteUpdatedAt: Value(game.remoteUpdatedAt),
             ),
           )
           .toList();
@@ -91,12 +116,16 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
           (trophy) => TrophiesCompanion.insert(
             apiName: trophy.apiName,
             displayName: trophy.displayName,
-            gameId: game.appId,
+            gamePlatform: game.platform.name,
+            gameCode: game.code,
             description: Value(trophy.description),
             icon: Value(trophy.icon),
             coloredIcon: Value(trophy.coloredIcon),
             isAchieved: Value(trophy.isAchieved),
             achievedAt: Value(trophy.achievedAt),
+            type: Value(trophy.type?.name),
+            hidden: Value(trophy.hidden),
+            rarity: Value(trophy.rarity),
           ),
         );
       }).toList();
@@ -130,8 +159,10 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   }
 
   @override
-  Future<void> deleteGameFromDb(int appId) async {
-    await (db.delete(db.games)..where((t) => t.appId.equals(appId))).go();
+  Future<void> deleteGameFromDb(GameKey key) async {
+    await (db.delete(
+      db.games,
+    )..where((t) => _isGame(t.platform, t.code, key))).go();
   }
 
   /// Emits the whole library whenever games or trophies change.
@@ -177,7 +208,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     return results
         .map(
           (r) => GameModel(
-            appId: r.appId,
+            code: '${r.appId}',
             name: r.name,
             publisher: [],
             platformSource: 'steam',
@@ -220,54 +251,31 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   }
 
   @override
-  Future<GameModel?> getGameByIdLocal(int appId) async {
+  Future<GameModel?> getGameByIdLocal(GameKey key) async {
     final gamesData = await (db.select(
       db.games,
-    )..where((t) => t.appId.equals(appId))).getSingleOrNull();
+    )..where((t) => _isGame(t.platform, t.code, key))).getSingleOrNull();
 
     if (gamesData == null) return null;
 
     final trophiesData = await (db.select(
       db.trophies,
-    )..where((t) => t.gameId.equals(appId))).get();
+    )..where((t) => _isGame(t.gamePlatform, t.gameCode, key))).get();
 
-    final trophies = trophiesData
-        .map(
-          (t) => TrophyModel(
-            apiName: t.apiName,
-            displayName: t.displayName,
-            description: t.description,
-            icon: t.icon,
-            coloredIcon: t.coloredIcon,
-            isAchieved: t.isAchieved,
-            achievedAt: t.achievedAt,
-          ),
-        )
-        .toList();
-
-    return GameModel(
-      appId: gamesData.appId,
-      name: gamesData.name,
-      publisher: gamesData.publisher ?? [],
-      description: gamesData.description,
-      headerImage: gamesData.headerImage,
-      libraryImage: gamesData.libraryImage,
-      addedAt: gamesData.addedAt,
-      platformSource: gamesData.platformSource,
-      isSynced: gamesData.isSynced,
-      trophies: trophies,
-    );
+    return _gameModel(gamesData, trophiesData.map(_trophyModel).toList());
   }
 
   @override
   Future<void> updateStateTrophy(
-    int appId,
+    GameKey key,
     String trophyName,
     bool status,
   ) async {
     await db.transaction(() async {
       await (db.update(db.trophies)..where(
-            (t) => t.gameId.equals(appId) & t.apiName.equals(trophyName),
+            (t) =>
+                _isGame(t.gamePlatform, t.gameCode, key) &
+                t.apiName.equals(trophyName),
           ))
           .write(
             TrophiesCompanion(
@@ -278,7 +286,9 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
 
       final trophy =
           await (db.select(db.trophies)..where(
-                (t) => t.gameId.equals(appId) & t.apiName.equals(trophyName),
+                (t) =>
+                    _isGame(t.gamePlatform, t.gameCode, key) &
+                    t.apiName.equals(trophyName),
               ))
               .getSingleOrNull();
 
@@ -289,7 +299,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
             .into(db.activities)
             .insert(
               ActivitiesCompanion.insert(
-                gameAppId: appId,
+                gamePlatform: key.platform.name,
+                gameCode: key.code,
                 timestamp: DateTime.now(),
                 trophyDisplayName: Value(trophy.displayName),
               ),
@@ -297,7 +308,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       } else {
         await (db.delete(db.activities)..where(
               (a) =>
-                  a.gameAppId.equals(appId) &
+                  _isGame(a.gamePlatform, a.gameCode, key) &
                   a.trophyDisplayName.equals(trophy.displayName),
             ))
             .go();

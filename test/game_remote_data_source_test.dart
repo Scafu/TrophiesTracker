@@ -103,7 +103,7 @@ void main() {
       await ds.fetchGamesFromSteamAccount(token);
       await ds
           .getGameByIdRemote(1, token: token)
-          .catchError((_) => const GameModel(appId: 1, name: ''));
+          .catchError((_) => const GameModel(code: '1', name: ''));
 
       expect(received, ['Bearer $token', 'Bearer $token']);
     },
@@ -203,8 +203,60 @@ void main() {
       final games = await ds.fetchGamesFromSteamAccount('t');
 
       expect(asked, ['1,2']);
-      expect(games.firstWhere((g) => g.appId == 2).libraryImage, real);
-      expect(games.firstWhere((g) => g.appId == 1).libraryImage, placeholder);
+      expect(games.firstWhere((g) => g.code == '2').libraryImage, real);
+      expect(games.firstWhere((g) => g.code == '1').libraryImage, placeholder);
+    });
+  });
+
+  group('categories', () {
+    GameRemoteDataSourceImpl source(
+      http.Response Function(http.Request) reply,
+    ) => GameRemoteDataSourceImpl(
+      client: MockClient((request) async => reply(request)),
+      proxyBaseUrl: 'https://x.test',
+    );
+
+    test('the games of a genre come with id and name, in order', () async {
+      late Uri asked;
+      final ds = source((request) {
+        asked = request.url;
+        return http.Response(
+          '[{"appid":620,"name":"Portal 2"},{"appid":105600,"name":"Terraria"}]',
+          200,
+        );
+      });
+
+      final games = await ds.fetchCategory(122);
+
+      expect(asked.path, '/category');
+      expect(asked.queryParameters, {'tag': '122'});
+      expect(
+        [for (final g in games) (g.code, g.name)],
+        [('620', 'Portal 2'), ('105600', 'Terraria')],
+      );
+    });
+
+    test('entries that are not a game are skipped', () async {
+      final ds = source(
+        (_) => http.Response(
+          '[{"appid":1,"name":"Ok"},{"appid":"2","name":"Id as text"},'
+          '{"appid":3},"junk",null]',
+          200,
+        ),
+      );
+
+      expect([for (final g in await ds.fetchCategory(19)) g.code], ['1']);
+    });
+
+    test('a failure is thrown so the page can say so', () async {
+      expect(
+        source((_) => http.Response('down', 502)).fetchCategory(19),
+        throwsException,
+      );
+      expect(
+        source((_) => http.Response('not json', 200)).fetchCategory(19),
+        throwsA(anything),
+      );
     });
   });
 }

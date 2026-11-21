@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TrophyModel {
 
- String get apiName; String get displayName; String? get description; String? get icon; String? get coloredIcon; bool get isAchieved; DateTime? get achievedAt;
+ String get apiName; String get displayName; String? get description; String? get icon; String? get coloredIcon; bool get isAchieved; DateTime? get achievedAt; TrophyType? get type; bool get hidden; double? get rarity;
 /// Create a copy of TrophyModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $TrophyModelCopyWith<TrophyModel> get copyWith => _$TrophyModelCopyWithImpl<Trop
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrophyModel&&(identical(other.apiName, apiName) || other.apiName == apiName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.description, description) || other.description == description)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.coloredIcon, coloredIcon) || other.coloredIcon == coloredIcon)&&(identical(other.isAchieved, isAchieved) || other.isAchieved == isAchieved)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrophyModel&&(identical(other.apiName, apiName) || other.apiName == apiName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.description, description) || other.description == description)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.coloredIcon, coloredIcon) || other.coloredIcon == coloredIcon)&&(identical(other.isAchieved, isAchieved) || other.isAchieved == isAchieved)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt)&&(identical(other.type, type) || other.type == type)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.rarity, rarity) || other.rarity == rarity));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,apiName,displayName,description,icon,coloredIcon,isAchieved,achievedAt);
+int get hashCode => Object.hash(runtimeType,apiName,displayName,description,icon,coloredIcon,isAchieved,achievedAt,type,hidden,rarity);
 
 @override
 String toString() {
-  return 'TrophyModel(apiName: $apiName, displayName: $displayName, description: $description, icon: $icon, coloredIcon: $coloredIcon, isAchieved: $isAchieved, achievedAt: $achievedAt)';
+  return 'TrophyModel(apiName: $apiName, displayName: $displayName, description: $description, icon: $icon, coloredIcon: $coloredIcon, isAchieved: $isAchieved, achievedAt: $achievedAt, type: $type, hidden: $hidden, rarity: $rarity)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $TrophyModelCopyWith<$Res>  {
   factory $TrophyModelCopyWith(TrophyModel value, $Res Function(TrophyModel) _then) = _$TrophyModelCopyWithImpl;
 @useResult
 $Res call({
- String apiName, String displayName, String? description, String? icon, String? coloredIcon, bool isAchieved, DateTime? achievedAt
+ String apiName, String displayName, String? description, String? icon, String? coloredIcon, bool isAchieved, DateTime? achievedAt, TrophyType? type, bool hidden, double? rarity
 });
 
 
@@ -65,7 +65,7 @@ class _$TrophyModelCopyWithImpl<$Res>
 
 /// Create a copy of TrophyModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? apiName = null,Object? displayName = null,Object? description = freezed,Object? icon = freezed,Object? coloredIcon = freezed,Object? isAchieved = null,Object? achievedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? apiName = null,Object? displayName = null,Object? description = freezed,Object? icon = freezed,Object? coloredIcon = freezed,Object? isAchieved = null,Object? achievedAt = freezed,Object? type = freezed,Object? hidden = null,Object? rarity = freezed,}) {
   return _then(_self.copyWith(
 apiName: null == apiName ? _self.apiName : apiName // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
@@ -74,7 +74,10 @@ as String?,icon: freezed == icon ? _self.icon : icon // ignore: cast_nullable_to
 as String?,coloredIcon: freezed == coloredIcon ? _self.coloredIcon : coloredIcon // ignore: cast_nullable_to_non_nullable
 as String?,isAchieved: null == isAchieved ? _self.isAchieved : isAchieved // ignore: cast_nullable_to_non_nullable
 as bool,achievedAt: freezed == achievedAt ? _self.achievedAt : achievedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as TrophyType?,hidden: null == hidden ? _self.hidden : hidden // ignore: cast_nullable_to_non_nullable
+as bool,rarity: freezed == rarity ? _self.rarity : rarity // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
 
@@ -159,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt,  TrophyType? type,  bool hidden,  double? rarity)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TrophyModel() when $default != null:
-return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt);case _:
+return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt,_that.type,_that.hidden,_that.rarity);case _:
   return orElse();
 
 }
@@ -180,10 +183,10 @@ return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt,  TrophyType? type,  bool hidden,  double? rarity)  $default,) {final _that = this;
 switch (_that) {
 case _TrophyModel():
-return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt);case _:
+return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt,_that.type,_that.hidden,_that.rarity);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +203,10 @@ return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String apiName,  String displayName,  String? description,  String? icon,  String? coloredIcon,  bool isAchieved,  DateTime? achievedAt,  TrophyType? type,  bool hidden,  double? rarity)?  $default,) {final _that = this;
 switch (_that) {
 case _TrophyModel() when $default != null:
-return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt);case _:
+return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_that.coloredIcon,_that.isAchieved,_that.achievedAt,_that.type,_that.hidden,_that.rarity);case _:
   return null;
 
 }
@@ -215,7 +218,7 @@ return $default(_that.apiName,_that.displayName,_that.description,_that.icon,_th
 @JsonSerializable()
 
 class _TrophyModel extends TrophyModel {
-  const _TrophyModel({required this.apiName, required this.displayName, this.description, this.icon, this.coloredIcon, this.isAchieved = false, this.achievedAt}): super._();
+  const _TrophyModel({required this.apiName, required this.displayName, this.description, this.icon, this.coloredIcon, this.isAchieved = false, this.achievedAt, this.type, this.hidden = false, this.rarity}): super._();
   factory _TrophyModel.fromJson(Map<String, dynamic> json) => _$TrophyModelFromJson(json);
 
 @override final  String apiName;
@@ -225,6 +228,9 @@ class _TrophyModel extends TrophyModel {
 @override final  String? coloredIcon;
 @override@JsonKey() final  bool isAchieved;
 @override final  DateTime? achievedAt;
+@override final  TrophyType? type;
+@override@JsonKey() final  bool hidden;
+@override final  double? rarity;
 
 /// Create a copy of TrophyModel
 /// with the given fields replaced by the non-null parameter values.
@@ -239,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrophyModel&&(identical(other.apiName, apiName) || other.apiName == apiName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.description, description) || other.description == description)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.coloredIcon, coloredIcon) || other.coloredIcon == coloredIcon)&&(identical(other.isAchieved, isAchieved) || other.isAchieved == isAchieved)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrophyModel&&(identical(other.apiName, apiName) || other.apiName == apiName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.description, description) || other.description == description)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.coloredIcon, coloredIcon) || other.coloredIcon == coloredIcon)&&(identical(other.isAchieved, isAchieved) || other.isAchieved == isAchieved)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt)&&(identical(other.type, type) || other.type == type)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.rarity, rarity) || other.rarity == rarity));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,apiName,displayName,description,icon,coloredIcon,isAchieved,achievedAt);
+int get hashCode => Object.hash(runtimeType,apiName,displayName,description,icon,coloredIcon,isAchieved,achievedAt,type,hidden,rarity);
 
 @override
 String toString() {
-  return 'TrophyModel(apiName: $apiName, displayName: $displayName, description: $description, icon: $icon, coloredIcon: $coloredIcon, isAchieved: $isAchieved, achievedAt: $achievedAt)';
+  return 'TrophyModel(apiName: $apiName, displayName: $displayName, description: $description, icon: $icon, coloredIcon: $coloredIcon, isAchieved: $isAchieved, achievedAt: $achievedAt, type: $type, hidden: $hidden, rarity: $rarity)';
 }
 
 
@@ -259,7 +265,7 @@ abstract mixin class _$TrophyModelCopyWith<$Res> implements $TrophyModelCopyWith
   factory _$TrophyModelCopyWith(_TrophyModel value, $Res Function(_TrophyModel) _then) = __$TrophyModelCopyWithImpl;
 @override @useResult
 $Res call({
- String apiName, String displayName, String? description, String? icon, String? coloredIcon, bool isAchieved, DateTime? achievedAt
+ String apiName, String displayName, String? description, String? icon, String? coloredIcon, bool isAchieved, DateTime? achievedAt, TrophyType? type, bool hidden, double? rarity
 });
 
 
@@ -276,7 +282,7 @@ class __$TrophyModelCopyWithImpl<$Res>
 
 /// Create a copy of TrophyModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? apiName = null,Object? displayName = null,Object? description = freezed,Object? icon = freezed,Object? coloredIcon = freezed,Object? isAchieved = null,Object? achievedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? apiName = null,Object? displayName = null,Object? description = freezed,Object? icon = freezed,Object? coloredIcon = freezed,Object? isAchieved = null,Object? achievedAt = freezed,Object? type = freezed,Object? hidden = null,Object? rarity = freezed,}) {
   return _then(_TrophyModel(
 apiName: null == apiName ? _self.apiName : apiName // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
@@ -285,7 +291,10 @@ as String?,icon: freezed == icon ? _self.icon : icon // ignore: cast_nullable_to
 as String?,coloredIcon: freezed == coloredIcon ? _self.coloredIcon : coloredIcon // ignore: cast_nullable_to_non_nullable
 as String?,isAchieved: null == isAchieved ? _self.isAchieved : isAchieved // ignore: cast_nullable_to_non_nullable
 as bool,achievedAt: freezed == achievedAt ? _self.achievedAt : achievedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as TrophyType?,hidden: null == hidden ? _self.hidden : hidden // ignore: cast_nullable_to_non_nullable
+as bool,rarity: freezed == rarity ? _self.rarity : rarity // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
 

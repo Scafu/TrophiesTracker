@@ -7,7 +7,7 @@ import 'package:trophies_tracker/features/game/presentation/gamelibrary/library_
 /// A game with [unlocked] of [total] trophies, the last one unlocked on [last].
 Game _game(String name, int unlocked, int total, {DateTime? last, int id = 1}) {
   return Game(
-    appId: id,
+    code: '$id',
     name: name,
     trophies: [
       for (var i = 0; i < total; i++)
@@ -73,7 +73,7 @@ void main() {
       ]);
     });
 
-    test('equal games keep a fixed order: by name, then by appId', () {
+    test('equal games keep a fixed order: by name, then by key', () {
       final same = [
         _game('Twin', 1, 4, id: 9),
         _game('Twin', 1, 4, id: 5),
@@ -83,7 +83,7 @@ void main() {
       final ids = arrangeLibrary(
         same,
         sort: LibrarySort.progress,
-      ).map((g) => g.appId);
+      ).map((g) => int.parse(g.code));
 
       expect(ids, [7, 5, 9]);
     });
@@ -108,7 +108,7 @@ void main() {
   });
 
   test('progress of a game with no trophies is zero', () {
-    expect(gameProgress(const Game(appId: 1, name: 'x')), 0);
+    expect(gameProgress(const Game(code: '1', name: 'x')), 0);
     expect(gameProgress(portal), 0.9);
   });
 

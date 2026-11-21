@@ -4,14 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/core/utils/debouncer/debouncer.dart';
 import 'package:trophies_tracker/core/widgets/capsule_search_field.dart';
+import 'package:trophies_tracker/core/widgets/section_label.dart';
 import 'package:trophies_tracker/core/widgets/tab_header.dart';
 import 'package:trophies_tracker/features/account/presentation/ui/account_button.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/categories.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_state.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/ui/category_tile.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/ui/explore_helpers.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/ui/explore_page_tiles.dart';
-import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
-import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_state.dart';
 
 /// Search over the offline Steam catalog.
 class ExplorePage extends StatefulWidget {
@@ -22,13 +24,6 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExploreUiState extends State<ExplorePage> {
-  static const _suggestions = [
-    'Elden Ring',
-    'Hades',
-    'Portal 2',
-    'Hollow Knight',
-  ];
-
   final TextEditingController _controller = TextEditingController();
   final Debouncer _debouncer = Debouncer(milliseconds: 350);
 
@@ -47,14 +42,6 @@ class _ExploreUiState extends State<ExplorePage> {
     _debouncer.cancel();
     _controller.clear();
     _search('');
-  }
-
-  void _useSuggestion(String suggestion) {
-    _controller.value = TextEditingValue(
-      text: suggestion,
-      selection: TextSelection.collapsed(offset: suggestion.length),
-    );
-    _search(suggestion);
   }
 
   @override
@@ -83,10 +70,7 @@ class _ExploreUiState extends State<ExplorePage> {
                 child: KeyedSubtree(
                   key: ValueKey(state.runtimeType),
                   child: switch (state) {
-                    ExploreInitial() => _Hint(
-                      suggestions: _suggestions,
-                      onSuggestion: _useSuggestion,
-                    ),
+                    ExploreInitial() => const _Categories(),
                     ExploreEmpty() => _Message(
                       icon: Symbols.search_off_rounded,
                       title: 'No games found',
@@ -113,80 +97,43 @@ class _ExploreUiState extends State<ExplorePage> {
   }
 }
 
-/// Shown before the first search: what the page does, and a few titles to try.
-class _Hint extends StatelessWidget {
-  final List<String> suggestions;
-  final ValueChanged<String> onSuggestion;
-
-  const _Hint({required this.suggestions, required this.onSuggestion});
+/// Shown before the first search: a tile for each genre to browse.
+class _Categories extends StatelessWidget {
+  const _Categories();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return SingleChildScrollView(
+    return CustomScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-      child: Column(
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+      slivers: [
+        const SliverToBoxAdapter(child: SectionLabel('Browse by category')),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverGrid.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: 92,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Icon(
-                Symbols.travel_explore_rounded,
-                size: 40,
-                color: colors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Find any Steam game',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Search the catalog, open a game and add it to your library to track its trophies.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'TRY',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final suggestion in suggestions)
-                ActionChip(
-                  label: Text(suggestion),
-                  backgroundColor: colors.surfaceContainerHigh,
-                  side: BorderSide(
-                    color: colors.onSurface.withValues(alpha: 0.10),
-                  ),
-                  shape: const StadiumBorder(),
-                  onPressed: () => onSuggestion(suggestion),
+            itemCount: gameCategories.length,
+            itemBuilder: (context, index) {
+              final category = gameCategories[index];
+
+              return CategoryTile(
+                category: category,
+                onTap: () => context.pushNamed(
+                  'category',
+                  pathParameters: {'tagId': category.tagId.toString()},
                 ),
-            ],
+              );
+            },
           ),
-        ],
-      ),
+        ),
+        SliverToBoxAdapter(
+          child: SizedBox(height: 120 + MediaQuery.paddingOf(context).bottom),
+        ),
+      ],
     );
   }
 }
@@ -246,10 +193,7 @@ class _Results extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inLibrary = context.watch<GameCubit>().state.maybeWhen(
-      loaded: (library) => {for (final game in library) game.appId},
-      orElse: () => <int>{},
-    );
+    final inLibrary = libraryKeys(context);
 
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -262,19 +206,13 @@ class _Results extends StatelessWidget {
       itemCount: games.length,
       itemBuilder: (context, index) {
         final game = games[index];
-        final owned = inLibrary.contains(game.appId);
+        final owned = inLibrary.contains(game.key);
 
         return ExploreGameTile(
           game: game,
           query: query,
           inLibrary: owned,
-          onTap: () => context.pushNamed(
-            'gameDetails',
-            pathParameters: {
-              'appId': game.appId.toString(),
-              'fromExplorer': (!owned).toString(),
-            },
-          ),
+          onTap: () => openGame(context, game, owned: owned),
         );
       },
     );

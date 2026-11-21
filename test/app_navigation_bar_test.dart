@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/core/theme/accent.dart';
@@ -94,6 +95,23 @@ void main() {
       expect(find.bySemanticsLabel(label), findsOneWidget);
     }
     handle.dispose();
+  });
+
+  testWidgets('the destinations fit a narrow phone without cutting a label', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_host(onSelected: (_) {}));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    for (final label in ['Library', 'Explore', 'Stats']) {
+      final paragraph = tester.renderObject<RenderParagraph>(find.text(label));
+      expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+    }
   });
 
   testWidgets('it does not overflow with large text', (tester) async {

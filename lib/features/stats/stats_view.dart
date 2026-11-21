@@ -40,38 +40,53 @@ LibraryTotals libraryTotals(List<Game> games) {
   );
 }
 
-typedef MonthCount = ({int year, int month, int count});
+typedef DayCount = ({DateTime day, int count});
 
-/// Trophies unlocked in each of the last [months] months, oldest first, the
-/// last entry being the month of [now]. Trophies with no date are not counted.
-List<MonthCount> unlocksPerMonth(
+/// Trophies unlocked on each day of the last [weeks] weeks, oldest first and
+/// ending today. Weeks start on Monday and the first day is the Monday
+/// `weeks - 1` weeks back, so the index modulo 7 is the weekday row and the
+/// last week stops at today. Trophies with no date are not counted.
+///
+/// [now] only exists so the result can be tested.
+List<DayCount> unlocksPerDay(
   List<Game> games, {
-  int months = 6,
+  int weeks = 20,
   DateTime? now,
 }) {
   final today = now ?? DateTime.now();
-  final counts = <(int, int), int>{};
+  final counts = <DateTime, int>{};
   for (final game in games) {
     for (final trophy in game.trophies) {
-      final date = trophy.achievedAt;
+      final date = trophy.achievedAt?.toLocal();
       if (trophy.isAchieved && date != null) {
-        counts.update((date.year, date.month), (n) => n + 1, ifAbsent: () => 1);
+        final day = DateTime(date.year, date.month, date.day);
+        counts.update(day, (n) => n + 1, ifAbsent: () => 1);
       }
     }
   }
 
-  return [
-    for (var back = months - 1; back >= 0; back--)
-      () {
-        final month = DateTime(today.year, today.month - back);
-        return (
-          year: month.year,
-          month: month.month,
-          count: counts[(month.year, month.month)] ?? 0,
-        );
-      }(),
-  ];
+  final first = DateTime(
+    today.year,
+    today.month,
+    today.day - (today.weekday - 1) - (weeks - 1) * 7,
+  );
+  final length = (weeks - 1) * 7 + today.weekday;
+  final days = <DayCount>[];
+  for (var i = 0; i < length; i++) {
+    final day = DateTime(first.year, first.month, first.day + i);
+    days.add((day: day, count: counts[day] ?? 0));
+  }
+  return days;
 }
+
+/// How strongly a day with [count] unlocks is drawn, from 0 (none) to 4.
+int activityLevel(int count) => switch (count) {
+  <= 0 => 0,
+  1 => 1,
+  2 => 2,
+  <= 4 => 3,
+  _ => 4,
+};
 
 /// The games with the most trophies unlocked, at most [limit]; games with
 /// none are left out. Ties go alphabetically.

@@ -6,6 +6,7 @@ import 'package:trophies_tracker/core/theme/accent.dart';
 import 'package:trophies_tracker/core/utils/time/time_format.dart';
 import 'package:trophies_tracker/core/widgets/app_toast.dart';
 import 'package:trophies_tracker/core/widgets/capsule_search_field.dart';
+import 'package:trophies_tracker/core/widgets/empty_state.dart';
 import 'package:trophies_tracker/core/widgets/sort_menu_button.dart';
 import 'package:trophies_tracker/core/widgets/tab_header.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
@@ -254,7 +255,8 @@ class _GamePageViewState extends State<GamePageView> {
   }
 }
 
-/// The header above [child], for the states with no list.
+/// The header above [child], for the states with no list. [child] gets the
+/// space above the floating navigation bar, so what it centers is not hidden.
 class _WithHeader extends StatelessWidget {
   final Widget child;
 
@@ -264,7 +266,14 @@ class _WithHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       const TabHeader(title: 'Library', actions: [AccountButton()]),
-      Expanded(child: child),
+      Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
+          child: child,
+        ),
+      ),
     ],
   );
 }
@@ -369,72 +378,28 @@ class _Welcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Icon(
-                Symbols.sports_esports_rounded,
-                size: 40,
-                color: colors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Your library is empty',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            authenticated
-                ? 'Sync with Steam to import your games, or find one to add by hand.'
-                : 'Link your Steam account to import your games, or find one to add by hand.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+      child: EmptyState(
+        icon: Symbols.sports_esports_rounded,
+        title: 'Your library is empty',
+        message: authenticated
+            ? 'Sync with Steam to import your games, or find one to add by hand.'
+            : 'Link an account to import your games, or find one to add by hand.',
+        actions: [
+          EmptyStateAction.primary(
+            icon: authenticated ? Symbols.sync_rounded : Symbols.link_rounded,
+            label: authenticated ? 'Sync with Steam' : 'Link account',
             onPressed: syncing
                 ? null
                 : authenticated
                 ? onSync
                 : () => context.push('/accounts'),
-            icon: Icon(
-              authenticated ? Symbols.sync_rounded : Symbols.link_rounded,
-              size: 20,
-            ),
-            label: Text(
-              authenticated ? 'Sync with Steam' : 'Link Steam account',
-            ),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(220, 48),
-              shape: const StadiumBorder(),
-            ),
           ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
+          EmptyStateAction.secondary(
+            icon: Symbols.explore_rounded,
+            label: 'Explore games',
             onPressed: () => context.go('/explore'),
-            icon: const Icon(Symbols.explore_rounded, size: 20),
-            label: const Text('Explore games'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(220, 48),
-              shape: const StadiumBorder(),
-            ),
           ),
         ],
       ),

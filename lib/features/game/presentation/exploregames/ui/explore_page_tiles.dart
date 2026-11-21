@@ -99,7 +99,7 @@ class ExploreGameTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Steam · ID ${game.appId}',
+                        '${game.platform.label} · ID ${game.code}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
@@ -109,7 +109,10 @@ class ExploreGameTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 inLibrary
-                    ? const _LibraryChip()
+                    ? ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: 112),
+                        child: _LibraryChip(),
+                      )
                     : Icon(
                         Symbols.chevron_right_rounded,
                         color: colors.onSurfaceVariant,
@@ -144,12 +147,16 @@ class _LibraryChip extends StatelessWidget {
           children: [
             Icon(Symbols.check_rounded, size: 14, color: accent),
             const SizedBox(width: 4),
-            Text(
-              'In library',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: accent,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                'In library',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

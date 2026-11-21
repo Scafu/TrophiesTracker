@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:trophies_tracker/core/theme/accent.dart';
 import 'package:trophies_tracker/core/widgets/game_cover.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 
 /// A round button of the details app bar.
 class GlassAction {
@@ -195,7 +196,8 @@ class _GlassButton extends StatelessWidget {
 }
 
 /// The expanded hero: blurred art fading into the page, the cover with a
-/// shadow, and the name, publisher and AppID beside it.
+/// shadow, and the name, publisher and AppID (or the consoles of a PlayStation
+/// game) beside it. A PlayStation cover is square, a Steam one is vertical.
 class GameHero extends StatelessWidget {
   final Game game;
 
@@ -261,7 +263,7 @@ class GameHero extends StatelessWidget {
                 ),
                 child: SizedBox(
                   width: 112,
-                  height: 168,
+                  height: game.platform == GamePlatform.steam ? 168 : 112,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: GameCover(game: game),
@@ -299,7 +301,11 @@ class GameHero extends StatelessWidget {
                       ],
                       const SizedBox(height: 2),
                       Text(
-                        'AppID ${game.appId}',
+                        game.platform == GamePlatform.steam
+                            ? 'AppID ${game.code}'
+                            : game.consoles.isEmpty
+                            ? game.platform.label
+                            : game.consoles.join(' · '),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
