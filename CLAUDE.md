@@ -32,7 +32,7 @@ Whenever the user confirms a decision about a feature (what it does, where it ru
 Documented features:
 
 - [Chat bot sui videogiochi](docs/features/chatbot.md): **rimosso** il 2026-11-21 su richiesta dell'utente (era sospeso dal 2026-11-20). Il codice non era mai stato committato ed è stato cancellato; il file resta come registro delle decisioni e del piano.
-- [Limite delle richieste del Worker](docs/features/rate-limiting.md): confermato il 2026-11-21 che si fa, con i binding `ratelimits` di Cloudflare per gruppo di rotte (chiave IP o hash del token, nessun dato salvato né nei log, se il limitatore si rompe passa tutto). Codice e test pronti, da pubblicare; protegge dagli abusi di una sola fonte ma **non** dalla quota giornaliera del piano Free né da un attacco distribuito (vedi il file).
+- [Limite delle richieste del Worker](docs/features/rate-limiting.md): confermato il 2026-11-21 che si fa, con i binding `ratelimits` di Cloudflare per gruppo di rotte (chiave IP o hash del token, nessun dato salvato né nei log, se il limitatore si rompe passa tutto). Pubblicato il 2026-11-21 e verificato in produzione (limite: 20 risposte poi 429; cache: `X-Cache` MISS poi HIT); protegge dagli abusi di una sola fonte ma **non** dalla quota giornaliera del piano Free né da un attacco distribuito (vedi il file).
 - [PlayStation Network](docs/features/psn.md): confermato il 2026-11-21 che si fa, con chiamate nel Worker, nessun dato sensibile nei log (log delle invocazioni disattivati e dati solo nei corpi `POST`), chiave dei giochi a due colonne (piattaforma e codice, dopo la prova del login), login nel browser come Steam senza token a mano e solo PS4 e PS5; il resto è una proposta. La connessione non è ufficiale.
 
 ## Architecture
