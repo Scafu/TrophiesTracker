@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trophies Tracker — Privacy Policy</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0c0c0f;
+      color: #e5e7eb;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 48px; }
+    .header h1 { font-size: 2rem; color: #3b82f6; margin-bottom: 8px; }
+    .header .subtitle { font-size: 1.1rem; color: #9ca3af; }
+    .header .date { font-size: 0.85rem; color: #6b7280; margin-top: 8px; }
+    h2 { font-size: 1.2rem; color: #3b82f6; margin: 36px 0 12px; }
+    h3 { font-size: 1rem; color: #93c5fd; margin: 24px 0 8px; }
+    p { margin-bottom: 14px; color: #d1d5db; }
+    ul { margin: 8px 0 16px 20px; }
+    li { margin-bottom: 6px; color: #d1d5db; }
+    .divider { border: none; border-top: 1px solid #1e1e28; margin: 32px 0; }
+    a { color: #3b82f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { text-align: center; color: #6b7280; font-size: 0.8rem; margin-top: 64px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Trophies Tracker</h1>
+      <div class="subtitle">Privacy Policy</div>
+      <div class="date">Last updated: November 2026</div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>1. Introduction</h2>
+    <p>Trophies Tracker ("the Application") is an independent application that allows users to view their Steam and PlayStation game libraries and the related achievements and trophies. This Privacy Policy describes what data is collected, how it is used, and what rights the user has.</p>
+    <p>The Application is not affiliated with, authorized by, sponsored by, or endorsed by Steam, Valve Corporation, Sony Interactive Entertainment, PlayStation, or any other gaming platform. The PlayStation connection is unofficial: it works through the same sign-in and services that Sony's own apps use, which Sony has not published for third parties and may change or block at any time.</p>
+
+    <hr class="divider">
+
+    <h2>2. Data Collected</h2>
+    <p>The Application collects only the following data, strictly necessary for the service to function:</p>
+
+    <h3>2.1 Data provided via Steam login</h3>
+    <ul>
+      <li>Steam ID — the unique identifier of the Steam account, obtained through Steam's OpenID authentication.</li>
+      <li>Steam username (persona name) — the public display name of the account.</li>
+      <li>Steam avatar — the public profile picture.</li>
+    </ul>
+
+    <h3>2.2 Data provided via PlayStation login</h3>
+    <ul>
+      <li>PlayStation online ID — the public name of the PlayStation Network account, when it can be read.</li>
+      <li>Sony sign-in tokens — issued by Sony after the user signs in on Sony's own page. The Application never sees the user's Sony email or password.</li>
+    </ul>
+
+    <h3>2.3 Game data</h3>
+    <ul>
+      <li>List of games in the user's Steam library, and of PS4 and PS5 games with trophies on the user's PlayStation account.</li>
+      <li>Achievements and trophies related to each game: names, descriptions, grade, whether they are hidden, how rare they are, and whether and when the user earned them.</li>
+    </ul>
+
+    <h3>2.4 Data NOT collected</h3>
+    <p>The Application does not collect:</p>
+    <ul>
+      <li>Email addresses or contact information.</li>
+      <li>Payment or financial data.</li>
+      <li>Geolocation data.</li>
+      <li>Biometric data.</li>
+      <li>Third-party data for advertising or profiling purposes.</li>
+      <li>Device advertising identifiers.</li>
+    </ul>
+
+    <hr class="divider">
+
+    <h2>3. How Data Is Used</h2>
+    <p>Collected data is used exclusively for the following purposes:</p>
+    <ul>
+      <li>Displaying the user's game libraries, achievements and trophies within the Application.</li>
+      <li>Synchronizing game, achievement and trophy data with Steam and PlayStation Network servers.</li>
+      <li>Saving game data locally on the device for offline access.</li>
+    </ul>
+    <p>Data is not used for advertising, profiling, or behavioral analysis. Data is not sold, transferred, or shared with third parties, except as strictly necessary for the service to function (Steam, Sony, Cloudflare).</p>
+
+    <hr class="divider">
+
+    <h2>4. How Data Is Stored</h2>
+
+    <h3>4.1 Proxy server (Cloudflare Worker)</h3>
+    <p>Every request to Steam or PlayStation Network goes through a proxy server (a Cloudflare Worker). It stores very little:</p>
+    <ul>
+      <li><strong>Steam:</strong> the user's Steam ID is stored on the proxy associated with an anonymous session token (UUID). The token expires after 30 days, after which it is automatically deleted, and it is deleted at once when the user logs out. During sign-in, a one-time code that expires after 60 seconds is also kept.</li>
+      <li><strong>PlayStation:</strong> nothing is stored. The proxy receives the sign-in code or the tokens in the body of an encrypted request, passes them on to Sony, and returns the answer.</li>
+      <li><strong>Request limits:</strong> to protect the service from abuse, the number of requests is limited for each client. The limit uses the client's IP address or a one-way hash of the session token as a key that Cloudflare's rate limiter keeps only for the length of the counting window (about a minute). The developer does not store it.</li>
+      <li><strong>Logs:</strong> the proxy does not record request logs. Session tokens, Sony tokens and Steam or PlayStation identifiers are never placed in request addresses.</li>
+      <li><strong>Public data cache:</strong> Cloudflare may keep, for up to a day, the answers of Steam that are the same for every user (for example the list of achievements of a game). They contain no personal data.</li>
+    </ul>
+
+    <h3>4.2 Local device storage</h3>
+    <p>Game data, achievements, trophies, and application preferences are saved exclusively on the user's device via a local database. No game data is transmitted to or stored on external servers owned by the developer.</p>
+    <p>The user's Steam ID, username, and avatar, and the PlayStation online ID with the date the link expires and the time of the last synchronization, are stored locally on the device for session persistence. The Steam session token and the PlayStation renewal token (valid for about 10 days) are kept in the secure storage of the device (iOS Keychain, Android Keystore). Sony's short-lived access token is kept in memory only. This data is deleted upon logout or uninstallation.</p>
+
+    <h3>4.3 Security</h3>
+    <ul>
+      <li>The session token replaces the Steam ID in all client-server communications, reducing exposure of the user's identifier.</li>
+      <li>Session tokens and Sony tokens travel in request headers or bodies, never in request addresses. The only thing that passes through an address is the one-time Steam sign-in code, which works once, for 60 seconds, and only together with a secret that stays in the Application.</li>
+      <li>All communications are conducted exclusively over encrypted HTTPS connections.</li>
+    </ul>
+
+    <hr class="divider">
+
+    <h2>5. Third-Party Services</h2>
+
+    <h3>5.1 Steam / Valve Corporation</h3>
+    <p>Authentication is handled through Steam's OpenID system. Library and achievement data is retrieved via Steam's public APIs. Steam's <a href="https://store.steampowered.com/privacy_agreement/" target="_blank">Privacy Policy</a> and Terms of Service apply.</p>
+
+    <h3>5.2 Sony / PlayStation Network</h3>
+    <p>The user signs in on Sony's own page, opened in the device's browser. Game and trophy data is retrieved through the same services used by Sony's own apps. Sony's privacy policy and terms of service apply to the PlayStation account and to the data it provides.</p>
+
+    <h3>5.3 Cloudflare</h3>
+    <p>The proxy server is hosted on Cloudflare Workers. Cloudflare may collect anonymous technical data according to its own <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Privacy Policy</a>.</p>
+
+    <h3>5.4 Ko-fi</h3>
+    <p>The Application contains a link to the developer's page on Ko-fi, where the user can choose to support the project. It opens in a browser view; the Application sends no data to Ko-fi, and Ko-fi's own privacy policy applies on its pages.</p>
+
+    <hr class="divider">
+
+    <h2>6. User Rights</h2>
+    <ul>
+      <li><strong>Access</strong> — the user can view their own data at any time directly within the Application.</li>
+      <li><strong>Deletion</strong> — by logging out of Steam, the session token is invalidated and local data is deleted. By unlinking PlayStation, the tokens and the games synchronized from it are deleted from the device; Sony's renewal token also expires on its own after about 10 days. Uninstalling the Application removes all local data from the device.</li>
+      <li><strong>Portability</strong> — game data is directly accessible through Steam and PlayStation Network.</li>
+    </ul>
+
+    <hr class="divider">
+
+    <h2>7. Children</h2>
+    <p>The Application is not intended for users under the age of 13. The developer does not knowingly collect personal data from children. If you believe a child has provided personal data through the Application, please contact the developer to request its deletion.</p>
+
+    <hr class="divider">
+
+    <h2>8. Changes to This Privacy Policy</h2>
+    <p>The developer reserves the right to update this Privacy Policy at any time. Changes will be communicated by updating the date at the top of this document. Continued use of the Application after changes are published constitutes acceptance of the updated policy.</p>
+
+    <hr class="divider">
+
+    <h2>9. Contact</h2>
+    <p>Developer: Alessandro Mazzariol<br>
+    Email: <a href="mailto:alessandro.mazzariol04@gmail.com">alessandro.mazzariol04@gmail.com</a><br>
+    Application: Trophies Tracker</p>
+
+    <div class="footer">© 2026 Alessandro Mazzariol — Trophies Tracker. All rights reserved.</div>
+  </div>
+</body>
+</html>
