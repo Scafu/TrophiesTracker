@@ -14,11 +14,11 @@ Link your accounts, see what is left to unlock in every game, how rare each trop
 
 <br />
 
-<img src="docs/screenshots/01-track.png" alt="Library" width="180" />
-<img src="docs/screenshots/02-explore.png" alt="Explore" width="180" />
-<img src="docs/screenshots/03-details.png" alt="Game details" width="180" />
-<img src="docs/screenshots/04-stats.png" alt="Stats" width="180" />
-<img src="docs/screenshots/05-link.png" alt="Settings" width="180" />
+<img src="docs/screenshots/01-track.png" alt="The library: all your games in one list" width="180" />
+<img src="docs/screenshots/02-explore.png" alt="Explore: browse genres or search the Steam catalog" width="180" />
+<img src="docs/screenshots/03-trophies.png" alt="A game's trophies with rarity and unlock date" width="180" />
+<img src="docs/screenshots/04-stats.png" alt="Stats: heat map and most-trophied games" width="180" />
+<img src="docs/screenshots/05-link.png" alt="Settings: link Steam and PlayStation" width="180" />
 
 </div>
 
