@@ -24,6 +24,9 @@ class GameCubit extends Cubit<GameState> {
     this._rateRequestLimiter,
   ) : super(const GameState.initial());
 
+  /// When the library was last synced from Steam, if it ever was.
+  DateTime? get lastSync => repository.lastSteamSync;
+
   void watchGames() {
     _librarySubscription?.cancel();
     _librarySubscription = repository.watchLibrary().listen(
@@ -38,17 +41,29 @@ class GameCubit extends Cubit<GameState> {
     );
   }
 
+  /// Emits [message] as an error, then resubscribes to the library so the
+  /// state falls back to the saved games instead of staying on the error.
+  void _fail(String message) {
+    emit(GameState.error(message));
+    watchGames();
+  }
+
   /// Fetches games from Steam using the stored token.
+  ///
+  /// Emits [GameState.syncSuccess] when games were saved. Any failure, rate
+  /// limit included, is emitted as a user-facing [GameState.error] followed by
+  /// the current library. A failed sync frees the rate limit so it can be
+  /// retried right away.
   Future<void> fetchGamesFromSteamAccount() async {
     const key = 'fetch_steam_games';
     if (!_rateRequestLimiter.isAllowed(key, const Duration(minutes: 5))) {
-      emit(const GameState.error('429'));
+      _fail(rateLimitedMessage);
       return;
     }
 
     final token = await accountRepository.getToken();
     if (token == null) {
-      emit(const GameState.error('No Steam token found.'));
+      _fail('No Steam token found.');
       return;
     }
 
@@ -56,10 +71,21 @@ class GameCubit extends Cubit<GameState> {
     emit(const GameState.loading());
 
     try {
-      await repository.fetchGamesFromSteamAccount(token);
-      watchGames();
+      final savedGames = await repository.fetchGamesFromSteamAccount(token);
+      if (savedGames > 0) {
+        emit(const GameState.syncSuccess());
+        watchGames();
+        return;
+      }
+      _rateRequestLimiter.clear(key);
+      _fail(
+        'No games with trophies found. '
+        'Check that your Steam profile and game details are public.',
+      );
     } catch (e) {
-      emit(GameState.error(e.toString()));
+      _logger.e('Steam library sync failed: $e');
+      _rateRequestLimiter.clear(key);
+      _fail('Could not sync your Steam library. Please try again.');
     }
   }
 

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GameModel {
 
- int get appId; String get name; String? get headerImage; String? get libraryImage; List<String> get publisher; List<TrophyModel> get trophies; String? get description; DateTime? get addedAt; String get platformSource; bool get isSynced;
+ GamePlatform get platform; String get code; String get name; String? get headerImage; String? get libraryImage; List<String> get publisher; List<TrophyModel> get trophies; String? get description; DateTime? get addedAt; String get platformSource; bool get isSynced; List<String> get consoles; DateTime? get remoteUpdatedAt;
 /// Create a copy of GameModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $GameModelCopyWith<GameModel> get copyWith => _$GameModelCopyWithImpl<GameModel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GameModel&&(identical(other.appId, appId) || other.appId == appId)&&(identical(other.name, name) || other.name == name)&&(identical(other.headerImage, headerImage) || other.headerImage == headerImage)&&(identical(other.libraryImage, libraryImage) || other.libraryImage == libraryImage)&&const DeepCollectionEquality().equals(other.publisher, publisher)&&const DeepCollectionEquality().equals(other.trophies, trophies)&&(identical(other.description, description) || other.description == description)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.platformSource, platformSource) || other.platformSource == platformSource)&&(identical(other.isSynced, isSynced) || other.isSynced == isSynced));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GameModel&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.headerImage, headerImage) || other.headerImage == headerImage)&&(identical(other.libraryImage, libraryImage) || other.libraryImage == libraryImage)&&const DeepCollectionEquality().equals(other.publisher, publisher)&&const DeepCollectionEquality().equals(other.trophies, trophies)&&(identical(other.description, description) || other.description == description)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.platformSource, platformSource) || other.platformSource == platformSource)&&(identical(other.isSynced, isSynced) || other.isSynced == isSynced)&&const DeepCollectionEquality().equals(other.consoles, consoles)&&(identical(other.remoteUpdatedAt, remoteUpdatedAt) || other.remoteUpdatedAt == remoteUpdatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,appId,name,headerImage,libraryImage,const DeepCollectionEquality().hash(publisher),const DeepCollectionEquality().hash(trophies),description,addedAt,platformSource,isSynced);
+int get hashCode => Object.hash(runtimeType,platform,code,name,headerImage,libraryImage,const DeepCollectionEquality().hash(publisher),const DeepCollectionEquality().hash(trophies),description,addedAt,platformSource,isSynced,const DeepCollectionEquality().hash(consoles),remoteUpdatedAt);
 
 @override
 String toString() {
-  return 'GameModel(appId: $appId, name: $name, headerImage: $headerImage, libraryImage: $libraryImage, publisher: $publisher, trophies: $trophies, description: $description, addedAt: $addedAt, platformSource: $platformSource, isSynced: $isSynced)';
+  return 'GameModel(platform: $platform, code: $code, name: $name, headerImage: $headerImage, libraryImage: $libraryImage, publisher: $publisher, trophies: $trophies, description: $description, addedAt: $addedAt, platformSource: $platformSource, isSynced: $isSynced, consoles: $consoles, remoteUpdatedAt: $remoteUpdatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $GameModelCopyWith<$Res>  {
   factory $GameModelCopyWith(GameModel value, $Res Function(GameModel) _then) = _$GameModelCopyWithImpl;
 @useResult
 $Res call({
- int appId, String name, String? headerImage, String? libraryImage, List<String> publisher, List<TrophyModel> trophies, String? description, DateTime? addedAt, String platformSource, bool isSynced
+ GamePlatform platform, String code, String name, String? headerImage, String? libraryImage, List<String> publisher, List<TrophyModel> trophies, String? description, DateTime? addedAt, String platformSource, bool isSynced, List<String> consoles, DateTime? remoteUpdatedAt
 });
 
 
@@ -65,10 +65,11 @@ class _$GameModelCopyWithImpl<$Res>
 
 /// Create a copy of GameModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? appId = null,Object? name = null,Object? headerImage = freezed,Object? libraryImage = freezed,Object? publisher = null,Object? trophies = null,Object? description = freezed,Object? addedAt = freezed,Object? platformSource = null,Object? isSynced = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? platform = null,Object? code = null,Object? name = null,Object? headerImage = freezed,Object? libraryImage = freezed,Object? publisher = null,Object? trophies = null,Object? description = freezed,Object? addedAt = freezed,Object? platformSource = null,Object? isSynced = null,Object? consoles = null,Object? remoteUpdatedAt = freezed,}) {
   return _then(_self.copyWith(
-appId: null == appId ? _self.appId : appId // ignore: cast_nullable_to_non_nullable
-as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as GamePlatform,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,headerImage: freezed == headerImage ? _self.headerImage : headerImage // ignore: cast_nullable_to_non_nullable
 as String?,libraryImage: freezed == libraryImage ? _self.libraryImage : libraryImage // ignore: cast_nullable_to_non_nullable
 as String?,publisher: null == publisher ? _self.publisher : publisher // ignore: cast_nullable_to_non_nullable
@@ -77,7 +78,9 @@ as List<TrophyModel>,description: freezed == description ? _self.description : d
 as String?,addedAt: freezed == addedAt ? _self.addedAt : addedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,platformSource: null == platformSource ? _self.platformSource : platformSource // ignore: cast_nullable_to_non_nullable
 as String,isSynced: null == isSynced ? _self.isSynced : isSynced // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,consoles: null == consoles ? _self.consoles : consoles // ignore: cast_nullable_to_non_nullable
+as List<String>,remoteUpdatedAt: freezed == remoteUpdatedAt ? _self.remoteUpdatedAt : remoteUpdatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -162,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int appId,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( GamePlatform platform,  String code,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced,  List<String> consoles,  DateTime? remoteUpdatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GameModel() when $default != null:
-return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced);case _:
+return $default(_that.platform,_that.code,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced,_that.consoles,_that.remoteUpdatedAt);case _:
   return orElse();
 
 }
@@ -183,10 +186,10 @@ return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int appId,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( GamePlatform platform,  String code,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced,  List<String> consoles,  DateTime? remoteUpdatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _GameModel():
-return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced);case _:
+return $default(_that.platform,_that.code,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced,_that.consoles,_that.remoteUpdatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +206,10 @@ return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int appId,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( GamePlatform platform,  String code,  String name,  String? headerImage,  String? libraryImage,  List<String> publisher,  List<TrophyModel> trophies,  String? description,  DateTime? addedAt,  String platformSource,  bool isSynced,  List<String> consoles,  DateTime? remoteUpdatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _GameModel() when $default != null:
-return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced);case _:
+return $default(_that.platform,_that.code,_that.name,_that.headerImage,_that.libraryImage,_that.publisher,_that.trophies,_that.description,_that.addedAt,_that.platformSource,_that.isSynced,_that.consoles,_that.remoteUpdatedAt);case _:
   return null;
 
 }
@@ -218,10 +221,11 @@ return $default(_that.appId,_that.name,_that.headerImage,_that.libraryImage,_tha
 @JsonSerializable()
 
 class _GameModel extends GameModel {
-  const _GameModel({required this.appId, required this.name, this.headerImage, this.libraryImage, final  List<String> publisher = const [], final  List<TrophyModel> trophies = const [], this.description, this.addedAt, this.platformSource = "local", this.isSynced = false}): _publisher = publisher,_trophies = trophies,super._();
+  const _GameModel({this.platform = GamePlatform.steam, required this.code, required this.name, this.headerImage, this.libraryImage, final  List<String> publisher = const [], final  List<TrophyModel> trophies = const [], this.description, this.addedAt, this.platformSource = "local", this.isSynced = false, final  List<String> consoles = const [], this.remoteUpdatedAt}): _publisher = publisher,_trophies = trophies,_consoles = consoles,super._();
   factory _GameModel.fromJson(Map<String, dynamic> json) => _$GameModelFromJson(json);
 
-@override final  int appId;
+@override@JsonKey() final  GamePlatform platform;
+@override final  String code;
 @override final  String name;
 @override final  String? headerImage;
 @override final  String? libraryImage;
@@ -243,6 +247,14 @@ class _GameModel extends GameModel {
 @override final  DateTime? addedAt;
 @override@JsonKey() final  String platformSource;
 @override@JsonKey() final  bool isSynced;
+ final  List<String> _consoles;
+@override@JsonKey() List<String> get consoles {
+  if (_consoles is EqualUnmodifiableListView) return _consoles;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_consoles);
+}
+
+@override final  DateTime? remoteUpdatedAt;
 
 /// Create a copy of GameModel
 /// with the given fields replaced by the non-null parameter values.
@@ -257,16 +269,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GameModel&&(identical(other.appId, appId) || other.appId == appId)&&(identical(other.name, name) || other.name == name)&&(identical(other.headerImage, headerImage) || other.headerImage == headerImage)&&(identical(other.libraryImage, libraryImage) || other.libraryImage == libraryImage)&&const DeepCollectionEquality().equals(other._publisher, _publisher)&&const DeepCollectionEquality().equals(other._trophies, _trophies)&&(identical(other.description, description) || other.description == description)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.platformSource, platformSource) || other.platformSource == platformSource)&&(identical(other.isSynced, isSynced) || other.isSynced == isSynced));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GameModel&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.headerImage, headerImage) || other.headerImage == headerImage)&&(identical(other.libraryImage, libraryImage) || other.libraryImage == libraryImage)&&const DeepCollectionEquality().equals(other._publisher, _publisher)&&const DeepCollectionEquality().equals(other._trophies, _trophies)&&(identical(other.description, description) || other.description == description)&&(identical(other.addedAt, addedAt) || other.addedAt == addedAt)&&(identical(other.platformSource, platformSource) || other.platformSource == platformSource)&&(identical(other.isSynced, isSynced) || other.isSynced == isSynced)&&const DeepCollectionEquality().equals(other._consoles, _consoles)&&(identical(other.remoteUpdatedAt, remoteUpdatedAt) || other.remoteUpdatedAt == remoteUpdatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,appId,name,headerImage,libraryImage,const DeepCollectionEquality().hash(_publisher),const DeepCollectionEquality().hash(_trophies),description,addedAt,platformSource,isSynced);
+int get hashCode => Object.hash(runtimeType,platform,code,name,headerImage,libraryImage,const DeepCollectionEquality().hash(_publisher),const DeepCollectionEquality().hash(_trophies),description,addedAt,platformSource,isSynced,const DeepCollectionEquality().hash(_consoles),remoteUpdatedAt);
 
 @override
 String toString() {
-  return 'GameModel(appId: $appId, name: $name, headerImage: $headerImage, libraryImage: $libraryImage, publisher: $publisher, trophies: $trophies, description: $description, addedAt: $addedAt, platformSource: $platformSource, isSynced: $isSynced)';
+  return 'GameModel(platform: $platform, code: $code, name: $name, headerImage: $headerImage, libraryImage: $libraryImage, publisher: $publisher, trophies: $trophies, description: $description, addedAt: $addedAt, platformSource: $platformSource, isSynced: $isSynced, consoles: $consoles, remoteUpdatedAt: $remoteUpdatedAt)';
 }
 
 
@@ -277,7 +289,7 @@ abstract mixin class _$GameModelCopyWith<$Res> implements $GameModelCopyWith<$Re
   factory _$GameModelCopyWith(_GameModel value, $Res Function(_GameModel) _then) = __$GameModelCopyWithImpl;
 @override @useResult
 $Res call({
- int appId, String name, String? headerImage, String? libraryImage, List<String> publisher, List<TrophyModel> trophies, String? description, DateTime? addedAt, String platformSource, bool isSynced
+ GamePlatform platform, String code, String name, String? headerImage, String? libraryImage, List<String> publisher, List<TrophyModel> trophies, String? description, DateTime? addedAt, String platformSource, bool isSynced, List<String> consoles, DateTime? remoteUpdatedAt
 });
 
 
@@ -294,10 +306,11 @@ class __$GameModelCopyWithImpl<$Res>
 
 /// Create a copy of GameModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? appId = null,Object? name = null,Object? headerImage = freezed,Object? libraryImage = freezed,Object? publisher = null,Object? trophies = null,Object? description = freezed,Object? addedAt = freezed,Object? platformSource = null,Object? isSynced = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? platform = null,Object? code = null,Object? name = null,Object? headerImage = freezed,Object? libraryImage = freezed,Object? publisher = null,Object? trophies = null,Object? description = freezed,Object? addedAt = freezed,Object? platformSource = null,Object? isSynced = null,Object? consoles = null,Object? remoteUpdatedAt = freezed,}) {
   return _then(_GameModel(
-appId: null == appId ? _self.appId : appId // ignore: cast_nullable_to_non_nullable
-as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as GamePlatform,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,headerImage: freezed == headerImage ? _self.headerImage : headerImage // ignore: cast_nullable_to_non_nullable
 as String?,libraryImage: freezed == libraryImage ? _self.libraryImage : libraryImage // ignore: cast_nullable_to_non_nullable
 as String?,publisher: null == publisher ? _self._publisher : publisher // ignore: cast_nullable_to_non_nullable
@@ -306,7 +319,9 @@ as List<TrophyModel>,description: freezed == description ? _self.description : d
 as String?,addedAt: freezed == addedAt ? _self.addedAt : addedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,platformSource: null == platformSource ? _self.platformSource : platformSource // ignore: cast_nullable_to_non_nullable
 as String,isSynced: null == isSynced ? _self.isSynced : isSynced // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,consoles: null == consoles ? _self._consoles : consoles // ignore: cast_nullable_to_non_nullable
+as List<String>,remoteUpdatedAt: freezed == remoteUpdatedAt ? _self.remoteUpdatedAt : remoteUpdatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

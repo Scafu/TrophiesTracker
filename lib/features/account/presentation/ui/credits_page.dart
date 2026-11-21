@@ -1,7 +1,36 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:trophies_tracker/core/widgets/app_toast.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+const developerEmail = 'alessandro.mazzariol04@gmail.com';
+
+/// Opens the mail app with a new message to the developer.
+///
+/// When nothing can open it, as on the iOS simulator or on a phone with no mail
+/// app set up, the address is copied and a message says so, instead of the
+/// button doing nothing.
+@visibleForTesting
+Future<void> writeToDeveloper(
+  BuildContext context, {
+  Future<bool> Function(Uri uri) launch = launchUrl,
+}) async {
+  var opened = false;
+  try {
+    opened = await launch(Uri(scheme: 'mailto', path: developerEmail));
+  } catch (_) {}
+  if (opened || !context.mounted) return;
+
+  await Clipboard.setData(const ClipboardData(text: developerEmail));
+  if (context.mounted) {
+    showAppToast(
+      context,
+      'No email app found. Address copied: $developerEmail',
+    );
+  }
+}
 
 class CreditsPage extends StatelessWidget {
   const CreditsPage({super.key});
@@ -51,7 +80,7 @@ class CreditsPage extends StatelessWidget {
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         Text(
-          'Lead Developer',
+          'Full Stack Mobile Developer',
           style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
@@ -60,12 +89,12 @@ class CreditsPage extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Symbols.alternate_email_rounded),
-              onPressed: () => launchUrl(
-                Uri.parse('mailto:alessandro.mazzariol@example.com'),
-              ),
+              tooltip: 'Email',
+              onPressed: () => writeToDeveloper(context),
             ),
             IconButton(
               icon: const Icon(Symbols.link_rounded),
+              tooltip: 'GitHub',
               onPressed: () => launchUrl(Uri.parse('https://github.com/Scafu')),
             ),
           ],

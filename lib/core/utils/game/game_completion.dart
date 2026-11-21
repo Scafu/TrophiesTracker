@@ -18,6 +18,10 @@ extension GameCompletion on Game {
     return (achievedCount / trophies.length) * 100;
   }
 
+  /// Whether the game has trophies and every one of them is unlocked.
+  bool get isCompleted =>
+      trophies.isNotEmpty && trophies.every((trophy) => trophy.isAchieved);
+
   /// Returns the formatted completion percentage as a string with no decimal places.
   String get formattedCompletionPercentage {
     return '${completionPercentage.toStringAsFixed(0)}%';

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trophies_tracker/core/domain/repositories/activity_repository.dart';
 import 'package:trophies_tracker/core/services/rate_request_limiter.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 import 'package:trophies_tracker/features/game/domain/entities/trophy.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_state.dart';
@@ -19,16 +20,16 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
 
   /// Load game details
   /// It first checks if the game is in local library. If not, it fetches from remote.
-  Future<void> loadGameDetails(int appId, {String? token}) async {
+  Future<void> loadGameDetails(GameKey key, {String? token}) async {
     emit(const GameDetailsLoading());
 
     try {
-      final bool isInLibrary = await _repository.isGameInLibrary(appId);
+      final bool isInLibrary = await _repository.isGameInLibrary(key);
       final Game game;
       if (isInLibrary) {
-        game = await _repository.getGameByIdLocal(appId);
+        game = await _repository.getGameByIdLocal(key);
       } else {
-        game = await _repository.getGameByIdRemote(appId, token: token);
+        game = await _repository.getGameByIdRemote(key, token: token);
       }
 
       emit(GameDetailsLoaded(game: game));
@@ -37,24 +38,34 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
     }
   }
 
-  Future<void> syncAchievements(int appId, {String? token}) async {
-    final key = 'syncAchievements_$appId';
+  /// Share of players who unlocked each trophy of [key], by API name; empty
+  /// when it is not available.
+  Future<Map<String, double>> fetchRarity(GameKey key) =>
+      _repository.getRarity(key);
+
+  /// Syncs the achievements of a loaded game, at most once every 5 minutes.
+  ///
+  /// A rate limit or a failure is emitted as [GameDetailsError] and followed
+  /// by the previous loaded state, so the page stays usable. A failed sync
+  /// frees the rate limit so it can be retried right away.
+  Future<void> syncAchievements(GameKey game, {String? token}) async {
+    final key = 'syncAchievements_$game';
+
+    final currentState = state;
+    if (currentState is! GameDetailsLoaded) return;
 
     if (!_rateRequestLimiter.isAllowed(key, const Duration(minutes: 5))) {
-      emit(GameDetailsError('429'));
+      emit(const GameDetailsError(rateLimitedMessage));
+      emit(currentState);
       return;
     }
 
     _rateRequestLimiter.markRequest(key);
-    if (state is! GameDetailsLoaded) return;
-
-    final currentState = state as GameDetailsLoaded;
-
     emit(currentState.copyWith(isSyncing: true));
 
     try {
       final remoteGame = await _repository.getGameByIdRemote(
-        appId,
+        game,
         token: token,
       );
 
@@ -93,9 +104,9 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
         final wasAchieved = previous?.isAchieved ?? false;
 
         if (!wasAchieved && trophy.isAchieved) {
-          await _activityRepository.addActivity(appId, trophy.displayName);
+          await _activityRepository.addActivity(game, trophy.displayName);
         } else if (wasAchieved && !trophy.isAchieved) {
-          await _activityRepository.removeActivity(appId, trophy.displayName);
+          await _activityRepository.removeActivity(game, trophy.displayName);
         }
       }
 
@@ -105,14 +116,15 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
 
       emit(GameDetailsLoaded(game: updatedGame, isSyncing: false));
     } catch (e) {
+      _rateRequestLimiter.clear(key);
       emit(GameDetailsError("Sync error: $e"));
       emit(currentState.copyWith(isSyncing: false));
     }
   }
 
-  Future<void> deleteGame(int appId) async {
+  Future<void> deleteGame(GameKey key) async {
     try {
-      await _repository.deleteGame(appId);
+      await _repository.deleteGame(key);
 
       emit(const GameDetailsDeleted());
     } catch (e) {
@@ -131,7 +143,7 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
   }
 
   Future<void> toggleTrophy(
-    int appId,
+    GameKey game,
     String trophyName,
     bool isCurrentlyAchieved,
   ) async {
@@ -157,10 +169,10 @@ class GameDetailsCubit extends Cubit<GameDetailsState> {
     );
 
     try {
-      await _repository.updateStateTrophy(appId, trophyName, newStatus);
+      await _repository.updateStateTrophy(game, trophyName, newStatus);
     } catch (e) {
       emit(GameDetailsError("Error toggling trophy: $e"));
-      final originalGame = await _repository.getGameByIdLocal(appId);
+      final originalGame = await _repository.getGameByIdLocal(game);
       emit(
         GameDetailsLoaded(
           game: originalGame,

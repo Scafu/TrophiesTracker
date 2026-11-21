@@ -1,4 +1,5 @@
 import 'package:trophies_tracker/core/domain/entities/game_activity.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 
 /// Defines the contract for managing user activities.
 ///
@@ -13,10 +14,10 @@ abstract class ActivityRepository {
 
   /// Records a new activity in the persistence layer.
   ///
-  /// Provide the [gameAppId] and an optional [trophyDisplayName].
+  /// Provide the [game] and an optional [trophyDisplayName].
   /// If [trophyDisplayName] is omitted or null, it registers a "game added" activity.
-  Future<void> addActivity(int gameAppId, [String? trophyDisplayName]);
+  Future<void> addActivity(GameKey game, [String? trophyDisplayName]);
 
   /// Removes a specific activity from the persistence layer.
-  Future<void> removeActivity(int gameAppId, [String? trophyDisplayName]);
+  Future<void> removeActivity(GameKey game, [String? trophyDisplayName]);
 }

@@ -38,30 +38,6 @@ class Themes {
       tileColor: Colors.transparent,
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFF2563EB),
-      iconTheme: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: Colors.white, size: 24);
-        }
-        return const IconThemeData(color: Color(0xFF64748B), size: 24);
-      }),
-      labelTextStyle: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return GoogleFonts.inter(
-            color: const Color(0xFF2563EB),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          );
-        }
-        return GoogleFonts.inter(
-          color: const Color(0xFF64748B),
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        );
-      }),
-    ),
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.white,
       foregroundColor: const Color(0xFF0F172A),
@@ -157,30 +133,6 @@ class Themes {
       textColor: Color(0xFFF8FAFC),
       iconColor: Color(0xFF94A3B8),
       tileColor: Colors.transparent,
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: const Color(0xFF14141A),
-      indicatorColor: const Color(0xFF3B82F6),
-      iconTheme: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: Colors.white, size: 24);
-        }
-        return const IconThemeData(color: Color(0xFF94A3B8), size: 24);
-      }),
-      labelTextStyle: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return GoogleFonts.inter(
-            color: const Color(0xFF3B82F6),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          );
-        }
-        return GoogleFonts.inter(
-          color: const Color(0xFF94A3B8),
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        );
-      }),
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: const Color(0xFF14141A),

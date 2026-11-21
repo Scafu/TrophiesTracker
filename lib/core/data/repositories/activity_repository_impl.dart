@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:trophies_tracker/core/database/app_database.dart';
 import 'package:trophies_tracker/core/domain/entities/game_activity.dart';
 import 'package:trophies_tracker/core/domain/repositories/activity_repository.dart';
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
 
 /// Implementation of [ActivityRepository] using the Drift local database.
 class ActivityRepositoryImpl implements ActivityRepository {
@@ -19,7 +20,10 @@ class ActivityRepositoryImpl implements ActivityRepository {
         .map((rows) {
           return rows.map((row) {
             return GameActivity(
-              gameAppId: row.gameAppId,
+              game: GameKey(
+                GamePlatform.values.byName(row.gamePlatform),
+                row.gameCode,
+              ),
               trophyDisplayName: row.trophyDisplayName,
               timestamp: row.timestamp,
             );
@@ -28,13 +32,14 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<void> addActivity(int gameAppId, [String? trophyDisplayName]) async {
+  Future<void> addActivity(GameKey game, [String? trophyDisplayName]) async {
     /// Inserts a new activity record into the Drift database.
     await db
         .into(db.activities)
         .insert(
           ActivitiesCompanion.insert(
-            gameAppId: gameAppId,
+            gamePlatform: game.platform.name,
+            gameCode: game.code,
             trophyDisplayName: Value(trophyDisplayName),
             timestamp: DateTime.now(),
           ),
@@ -42,13 +47,12 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<void> removeActivity(
-    int gameAppId, [
-    String? trophyDisplayName,
-  ]) async {
+  Future<void> removeActivity(GameKey game, [String? trophyDisplayName]) async {
     /// Deletes specific activities matching the game and optional trophy name.
     await (db.delete(db.activities)..where((t) {
-          final isSameGame = t.gameAppId.equals(gameAppId);
+          final isSameGame =
+              t.gamePlatform.equals(game.platform.name) &
+              t.gameCode.equals(game.code);
           if (trophyDisplayName != null) {
             return isSameGame & t.trophyDisplayName.equals(trophyDisplayName);
           }

@@ -17,11 +17,17 @@ class _SplashScreenState extends State<SplashScreen> {
     _initCatalog();
   }
 
+  /// Prepares the Steam catalog, then opens the library.
+  ///
+  /// Waits at most 15 seconds: on a slow or missing network the app opens
+  /// anyway and the download keeps going in the background.
   Future<void> _initCatalog() async {
     final gameRepository = di.sl<GameRepository>();
 
     try {
-      await gameRepository.syncSteamCatalog();
+      await gameRepository.syncSteamCatalog().timeout(
+        const Duration(seconds: 15),
+      );
     } catch (e) {
       debugPrint('Catalog sync error: $e');
     }

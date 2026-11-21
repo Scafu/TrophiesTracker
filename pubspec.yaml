@@ -2,7 +2,7 @@ name: trophies_tracker
 description: "A game trophies tracking app, that sync your favourite platform all together."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+4
+version: 1.1.0+5
 
 environment:
   sdk: ^3.10.4
@@ -37,6 +37,9 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.7
+  crypto: ^3.0.8
+  flutter_web_auth_2: ^6.0.0
+  package_info_plus: ^10.2.2
 dev_dependencies:
   drift_dev: ^2.32.0
   flutter_test:

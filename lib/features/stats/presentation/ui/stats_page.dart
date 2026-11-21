@@ -1,212 +1,140 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:trophies_tracker/core/widgets/empty_state.dart';
+import 'package:trophies_tracker/core/widgets/section_label.dart';
+import 'package:trophies_tracker/core/widgets/tab_header.dart';
+import 'package:trophies_tracker/features/account/presentation/ui/account_button.dart';
 import 'package:trophies_tracker/features/game/domain/entities/game.dart';
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.dart';
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_state.dart';
 import 'package:trophies_tracker/features/stats/presentation/ui/stats_widgets.dart';
+import 'package:trophies_tracker/features/stats/stats_view.dart';
 
-/// Displays the user's statistics, including library summary and recent activity.
+/// The library in numbers: overall progress, what is completed or under way,
+/// the busiest months, the games with the most trophies and the latest unlocks.
 class StatsPage extends StatelessWidget {
   const StatsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocBuilder<StatsCubit, StatsState>(
-        builder: (context, state) {
-          return switch (state) {
-            StatsLoading() => const Center(child: CircularProgressIndicator()),
-            StatsError(message: var m) => Center(child: Text(m)),
-            StatsLoaded(games: var games, activities: var acts) =>
-              CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              title: "Library",
-                              count: state.totalGames,
-                              icon: Symbols.sports_esports_rounded,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _StatCard(
-                              title: "Trophies",
-                              count: state.totalAchievedTrophies,
-                              icon: Symbols.trophy_rounded,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 16, top: 16, bottom: 16),
-                      child: Text(
-                        "Your Library",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 180,
-                      child: games.isEmpty
-                          ? const Center(child: Text("No games added"))
-                          : ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: games.length,
-                              itemBuilder: (context, i) =>
-                                  _GameLibraryTile(game: games[i]),
-                            ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 16, top: 24, bottom: 8),
-                      child: Text(
-                        "Recent Trophies",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (acts.isEmpty)
-                    const SliverToBoxAdapter(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text("No recent trophies"),
-                        ),
-                      ),
-                    )
-                  else
-                    SliverList.builder(
-                      itemCount: acts.length,
-                      itemBuilder: (context, i) =>
-                          ActivityTile(activity: acts[i], games: games),
-                    ),
-                ],
-              ),
-          };
-        },
-      ),
+    return BlocBuilder<StatsCubit, StatsState>(
+      builder: (context, state) {
+        return switch (state) {
+          StatsLoading() => const _UnderHeader(
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          StatsError(message: final message) => _UnderHeader(
+            child: Center(child: Text(message)),
+          ),
+          StatsLoaded(games: final games) when games.isEmpty =>
+            const _UnderHeader(child: _NoStats()),
+          StatsLoaded(games: final games) => _Stats(games: games),
+        };
+      },
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final int count;
-  final IconData icon;
+class _Stats extends StatelessWidget {
+  final List<Game> games;
 
-  const _StatCard({
-    required this.title,
-    required this.count,
-    required this.icon,
-  });
+  const _Stats({required this.games});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final totals = libraryTotals(games);
+    final days = unlocksPerDay(games);
+    final top = topGames(games);
+    final recent = recentUnlocks(games, limit: 6);
+    const side = EdgeInsets.symmetric(horizontal: 20);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: colorScheme.primary),
-          const SizedBox(height: 12),
-          Text(
-            count.toString(),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(child: _Header()),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          sliver: SliverList.list(
+            children: [
+              StatsHero(totals: totals),
+              const SizedBox(height: 28),
+              LibraryBreakdown(totals: totals),
+            ],
           ),
-          Text(
-            title,
-            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+        ),
+        if (days.any((d) => d.count > 0)) ...[
+          const SliverToBoxAdapter(child: SectionLabel('Activity')),
+          SliverPadding(
+            padding: side,
+            sliver: SliverToBoxAdapter(child: ActivityHeatmap(days: days)),
           ),
         ],
-      ),
+        if (top.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SectionLabel('Most trophies')),
+          SliverToBoxAdapter(child: TopGamesList(games: top)),
+        ],
+        if (recent.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SectionLabel('Recent unlocks')),
+          SliverToBoxAdapter(child: RecentUnlocksList(unlocks: recent)),
+        ],
+        SliverToBoxAdapter(
+          child: SizedBox(height: 120 + MediaQuery.paddingOf(context).bottom),
+        ),
+      ],
     );
   }
 }
 
-class _GameLibraryTile extends StatelessWidget {
-  final Game game;
+class _Header extends StatelessWidget {
+  const _Header();
 
-  const _GameLibraryTile({required this.game});
+  @override
+  Widget build(BuildContext context) =>
+      const TabHeader(title: 'Stats', actions: [AccountButton()]);
+}
+
+/// The header of the page above [child], for the states with no stats.
+/// [child] gets the space above the floating navigation bar, so what it
+/// centers is not hidden.
+class _UnderHeader extends StatelessWidget {
+  final Widget child;
+
+  const _UnderHeader({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      const _Header(),
+      Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
+          child: child,
+        ),
+      ),
+    ],
+  );
+}
+
+/// Shown while the library has no games: there is nothing to count yet.
+class _NoStats extends StatelessWidget {
+  const _NoStats();
 
   @override
   Widget build(BuildContext context) {
-    final achieved = game.trophies.where((t) => t.isAchieved).length;
-    final total = game.trophies.length;
-    final progress = total > 0 ? achieved / total : 0.0;
-
-    return Container(
-      width: 110,
-      margin: const EdgeInsets.only(right: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                child: CachedNetworkImage(
-                  imageUrl: game.libraryImage ?? '',
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorWidget: (context, url, error) => Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.gamepad)),
-                  ),
-                ),
-                onTap: () => context.pushNamed(
-                  'gameDetails',
-                  pathParameters: {
-                    'appId': game.appId.toString(),
-                    'fromExplorer': 'false',
-                  },
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            game.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: progress,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: Symbols.bar_chart_rounded,
+      title: 'No stats yet',
+      message: 'Add games to your library and your progress shows up here.',
+      actions: [
+        EmptyStateAction.primary(
+          icon: Symbols.explore_rounded,
+          label: 'Explore games',
+          onPressed: () => context.go('/explore'),
+        ),
+      ],
     );
   }
 }

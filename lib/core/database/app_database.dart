@@ -23,7 +23,10 @@ class StringListConverter extends TypeConverter<List<String>, String> {
 }
 
 class Games extends Table {
-  IntColumn get appId => integer()();
+  /// The store (`steam` or `psn`) and the game's code there: together they
+  /// identify the game, so ids of different stores can never clash.
+  TextColumn get platform => text()();
+  TextColumn get code => text()();
   TextColumn get name => text()();
   TextColumn get publisher =>
       text().map(const StringListConverter()).nullable()();
@@ -35,8 +38,15 @@ class Games extends Table {
       text().withDefault(const Constant('local'))();
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
 
+  /// The consoles of a PlayStation game, as a list of names (`PS5`, `PS4`).
+  TextColumn get consoles =>
+      text().map(const StringListConverter()).nullable()();
+
+  /// When the platform last updated the game's trophies, as it said.
+  DateTimeColumn get remoteUpdatedAt => dateTime().nullable()();
+
   @override
-  Set<Column> get primaryKey => {appId};
+  Set<Column> get primaryKey => {platform, code};
 }
 
 class Trophies extends Table {
@@ -47,18 +57,36 @@ class Trophies extends Table {
   TextColumn get coloredIcon => text().nullable()();
   BoolColumn get isAchieved => boolean().withDefault(const Constant(false))();
   DateTimeColumn get achievedAt => dateTime().nullable()();
-  IntColumn get gameId =>
-      integer().references(Games, #appId, onDelete: KeyAction.cascade)();
+
+  /// `bronze`, `silver`, `gold` or `platinum`, for PlayStation trophies.
+  TextColumn get type => text().nullable()();
+  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+
+  /// The share of players who earned it, from 0 to 100.
+  RealColumn get rarity => real().nullable()();
+  TextColumn get gamePlatform => text()();
+  TextColumn get gameCode => text()();
+
   @override
-  Set<Column> get primaryKey => {apiName, gameId};
+  Set<Column> get primaryKey => {apiName, gamePlatform, gameCode};
+
+  @override
+  List<String> get customConstraints => [
+    'FOREIGN KEY (game_platform, game_code) REFERENCES games (platform, code) ON DELETE CASCADE',
+  ];
 }
 
 class Activities extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get gameAppId =>
-      integer().references(Games, #appId, onDelete: KeyAction.cascade)();
+  TextColumn get gamePlatform => text()();
+  TextColumn get gameCode => text()();
   TextColumn get trophyDisplayName => text().nullable()();
   DateTimeColumn get timestamp => dateTime()();
+
+  @override
+  List<String> get customConstraints => [
+    'FOREIGN KEY (game_platform, game_code) REFERENCES games (platform, code) ON DELETE CASCADE',
+  ];
 }
 
 class SteamCatalog extends Table {
@@ -76,6 +104,8 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 3;
 
+  /// Schema upgrades, plus `PRAGMA foreign_keys = ON` on every connection:
+  /// SQLite ignores `onDelete: cascade` unless it is enabled.
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
@@ -84,6 +114,7 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(games, games.isSynced);
         }
       },
+      beforeOpen: (details) => customStatement('PRAGMA foreign_keys = ON'),
     );
   }
 }

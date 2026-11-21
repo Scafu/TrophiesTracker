@@ -1,8 +1,10 @@
+import 'package:trophies_tracker/features/game/domain/entities/game_key.dart';
+
 /// Represents an activity event performed by the user, such as
 /// adding a new game to the library or unlocking a specific trophy.
 class GameActivity {
-  /// The unique identifier of the game associated with this activity.
-  final int gameAppId;
+  /// The game associated with this activity.
+  final GameKey game;
 
   /// The display name of the unlocked trophy.
   /// If this is null, the activity represents adding the game to the library.
@@ -13,7 +15,7 @@ class GameActivity {
 
   /// Creates a new [GameActivity] instance.
   const GameActivity({
-    required this.gameAppId,
+    required this.game,
     this.trophyDisplayName,
     required this.timestamp,
   });

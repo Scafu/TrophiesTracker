@@ -11,7 +11,9 @@ workflows:
     name: Trophies Tracker
     max_build_duration: 60
     environment:
-      flutter: stable
+      # The packages need Flutter 3.47 or newer (flutter_web_auth_2 6.0): pinned to
+      # the version the app is built and tested with, not to "stable".
+      flutter: 3.47.7
       xcode: latest
       cocoapods: default
       android_signing:
@@ -35,6 +37,10 @@ workflows:
       - name: Analyze project
         script: |
           flutter analyze
+
+      - name: Run tests
+        script: |
+          flutter test
       
       - name: Build APK
         script: |
@@ -53,7 +59,10 @@ workflows:
         script: |
           flutter build appbundle --release
       
+      # iOS is only checked to compile for now: there is no signing, so nothing
+      # distributable comes out of it. It must not stop the Android release.
       - name: Build iOS
+        ignore_failure: true
         script: |
           flutter build ios --release --no-codesign
       
@@ -151,3 +160,44 @@ workflows:
       - build/ios/iphoneos/*.app
       - trophies-tracker-*.apk
       - trophies-tracker-*.aab
+
+  # Checks only, no build and no release: they run on pull requests into main or
+  # develop and on pushes to develop, so unfinished work is tested before it can
+  # reach main (which is what gets released). A push to main also matches it and
+  # runs the checks once more next to app_build.
+  checks:
+    name: Checks (develop and pull requests)
+    max_build_duration: 30
+    environment:
+      # The packages need Flutter 3.47 or newer (flutter_web_auth_2 6.0): pinned to
+      # the version the app is built and tested with, not to "stable".
+      flutter: 3.47.7
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: develop
+          include: true
+          source: true
+        - pattern: develop
+          include: true
+          source: false
+        - pattern: main
+          include: true
+          source: false
+      cancel_previous_builds: true
+
+    scripts:
+      - name: Get dependencies
+        script: |
+          flutter pub get
+
+      - name: Analyze project
+        script: |
+          flutter analyze
+
+      - name: Run tests
+        script: |
+          flutter test

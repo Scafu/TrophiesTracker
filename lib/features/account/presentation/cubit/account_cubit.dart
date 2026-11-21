@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trophies_tracker/core/services/log.dart';
 import 'package:trophies_tracker/features/account/domain/repositories/account_repository.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_state.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
@@ -61,14 +62,12 @@ class AccountCubit extends Cubit<AccountState> {
 
   /// Initiates the Steam login flow by launching the external browser.
   Future<void> login() async {
-    final loginUrl = repository.getLoginUrl();
-    final uri = Uri.parse(loginUrl);
-
     try {
+      final uri = Uri.parse(await repository.startLogin());
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!isClosed) {
-        emit(const AccountState.error('Could not launch Steam login.'));
+        emit(const AccountState.error('Could not open Steam to link your account.'));
       }
     }
   }
@@ -89,24 +88,35 @@ class AccountCubit extends Cubit<AccountState> {
     }
   }
 
-  /// Handles incoming deep links and extracts the Steam ID if present.
+  /// Handles the login callback: a `trophiestracker://` link or the verified
+  /// `https` App Link carrying the one-time `code`. Any other link is ignored.
   void _handleDeepLink(Uri uri) {
-    if (uri.scheme == 'trophiestracker') {
-      final token = uri.queryParameters['token'];
-      if (token != null) {
-        _finishLogin(token);
-      }
-    }
+    if (uri.scheme != 'trophiestracker' && uri.scheme != 'https') return;
+
+    final code = uri.queryParameters['code'];
+    if (code != null) _finishLogin(code);
   }
 
-  /// Completes the login process using the extracted Steam ID.
-  Future<void> _finishLogin(String token) async {
+  /// Completes the login by exchanging the one-time [code] for a session.
+  ///
+  /// A repeated or unsolicited link finds no login in progress and leaves the
+  /// state as it was.
+  Future<void> _finishLogin(String code) async {
+    final previous = state;
     emit(const AccountState.loading());
     try {
-      final user = await repository.finishLogin(token);
-      if (!isClosed) emit(AccountState.authenticated(user));
+      final user = await repository.finishLogin(code);
+      if (isClosed) return;
+      emit(user == null ? previous : AccountState.authenticated(user));
     } catch (e) {
-      if (!isClosed) emit(AccountState.error(e.toString()));
+      logger.e('Steam login failed: $e');
+      if (!isClosed) {
+        emit(
+          const AccountState.error(
+            'Could not link your Steam account. Please try again.',
+          ),
+        );
+      }
     }
   }
 

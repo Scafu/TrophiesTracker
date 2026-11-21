@@ -1,3 +1,5 @@
+import 'package:trophies_tracker/core/services/log.dart';
+import 'package:trophies_tracker/core/utils/pkce/pkce.dart';
 import 'package:trophies_tracker/features/account/data/datasource/account_local_data_source.dart';
 import 'package:trophies_tracker/features/account/data/datasource/account_remote_data_source.dart';
 import 'package:trophies_tracker/features/account/domain/entities/steam_user.dart';
@@ -18,8 +20,10 @@ class AccountRepositoryImpl implements AccountRepository {
   });
 
   @override
-  String getLoginUrl() {
-    return remoteDataSource.getSteamLoginUrl();
+  Future<String> startLogin() async {
+    final pkce = Pkce.generate();
+    await localDataSource.saveLoginVerifier(pkce.verifier);
+    return remoteDataSource.getSteamLoginUrl(pkce.challenge);
   }
 
   @override
@@ -28,7 +32,11 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<SteamUser> finishLogin(String token) async {
+  Future<SteamUser?> finishLogin(String code) async {
+    final verifier = await localDataSource.takeLoginVerifier();
+    if (verifier == null) return null;
+
+    final token = await remoteDataSource.exchangeCode(code, verifier);
     await localDataSource.saveToken(token);
     final userModel = await remoteDataSource.getSteamUserInfo(token);
     await localDataSource.saveUser(userModel);
@@ -43,8 +51,18 @@ class AccountRepositoryImpl implements AccountRepository {
     return userModel.toEntity().copyWith(token: token);
   }
 
+  /// Ends the session. Revoking the token on the server is best effort: the
+  /// local session is cleared even when the network call fails.
   @override
   Future<void> logout() async {
+    final token = await localDataSource.getToken();
+    if (token != null) {
+      try {
+        await remoteDataSource.revokeToken(token);
+      } catch (e) {
+        logger.w('Could not revoke the session token: $e');
+      }
+    }
     await localDataSource.deleteToken();
     await localDataSource.deleteUser();
   }

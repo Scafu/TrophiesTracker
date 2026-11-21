@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,14 +17,30 @@ import 'package:trophies_tracker/features/game/data/datasource/game_remote_data_
 import 'package:trophies_tracker/features/game/data/repositories/game_repositories_impl.dart';
 import 'package:trophies_tracker/features/game/domain/repositories/game_repository.dart';
 import 'package:trophies_tracker/features/game/presentation/details/cubit/game_details_cubit.dart';
+import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/category_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
+import 'package:trophies_tracker/features/psn/data/psn_local_data_source.dart';
+import 'package:trophies_tracker/features/psn/data/psn_remote_data_source.dart';
+import 'package:trophies_tracker/features/psn/data/psn_repository_impl.dart';
+import 'package:trophies_tracker/features/psn/data/web_authenticate.dart';
+import 'package:trophies_tracker/features/psn/domain/psn_repository.dart';
+import 'package:trophies_tracker/features/psn/presentation/cubit/psn_cubit.dart';
+import 'package:trophies_tracker/features/psn/presentation/psn_login_probe.dart';
 import 'package:trophies_tracker/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:trophies_tracker/features/settings/domain/repositories/settings_repository.dart';
 import 'package:trophies_tracker/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:trophies_tracker/features/stats/presentation/cubit/stats_cubit.dart';
 
 final sl = GetIt.instance;
+
+/// The Worker every remote call goes through. To try a Worker that is not
+/// published yet, run it with `wrangler dev` and start the app with
+/// `--dart-define=PROXY_URL=http://127.0.0.1:8787`.
+const _proxyBaseUrl = String.fromEnvironment(
+  'PROXY_URL',
+  defaultValue: 'https://trophiestracker.alessandro-mazzariol04.workers.dev',
+);
 
 Future<void> init() async {
   sl.registerLazySingleton<Logger>(() => logger);
@@ -40,15 +57,15 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<GameRemoteDataSource>(
-    () => GameRemoteDataSourceImpl(
-      client: sl(),
-      proxyBaseUrl:
-          'https://trophiestracker.alessandro-mazzariol04.workers.dev',
-    ),
+    () => GameRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
   );
 
   sl.registerLazySingleton<GameRepository>(
-    () => GameRepositoriesImpl(localDataSource: sl(), remoteDataSource: sl()),
+    () => GameRepositoriesImpl(
+      localDataSource: sl(),
+      remoteDataSource: sl(),
+      sharedPreferences: sl(),
+    ),
   );
 
   sl.registerLazySingleton<ActivityRepository>(
@@ -56,16 +73,18 @@ Future<void> init() async {
   );
 
   // Account Feature
+  sl.registerLazySingleton(() => const FlutterSecureStorage());
+
   sl.registerLazySingleton<AccountLocalDataSource>(
-    () => AccountLocalDataSourceImpl(sharedPreferences: sl()),
+    () => AccountLocalDataSourceImpl(
+      sharedPreferences: sl(),
+      secureStorage: sl(),
+    ),
   );
 
   sl.registerLazySingleton<AccountRemoteDataSource>(
-    () => AccountRemoteDataSourceImpl(
-      client: sl(),
-      proxyBaseUrl:
-          'https://trophiestracker.alessandro-mazzariol04.workers.dev',
-    ),
+    () =>
+        AccountRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
   );
 
   sl.registerLazySingleton<RateRequestLimiter>(() => RateRequestLimiter());
@@ -84,7 +103,26 @@ Future<void> init() async {
 
   sl.registerFactory(() => ExploreCubit(sl()));
 
-  sl.registerFactory(() => StatsCubit(sl(), sl()));
+  sl.registerFactory(() => CategoryCubit(sl()));
+
+  sl.registerFactory(() => StatsCubit(sl()));
+
+  // PlayStation
+  sl.registerLazySingleton<PsnRemoteDataSource>(
+    () => PsnRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
+  );
+
+  sl.registerLazySingleton<PsnLocalDataSource>(
+    () => PsnLocalDataSourceImpl(sharedPreferences: sl(), secureStorage: sl()),
+  );
+
+  sl.registerLazySingleton<PsnRepository>(
+    () => PsnRepositoryImpl(remote: sl(), local: sl(), games: sl()),
+  );
+
+  sl.registerFactory(() => PsnCubit(sl(), systemBrowserAuthenticate));
+
+  sl.registerFactory(() => PsnLoginProbe(sl(), systemBrowserAuthenticate));
 
   sl.registerFactory(() => GameDetailsCubit(sl(), sl(), sl()));
 
