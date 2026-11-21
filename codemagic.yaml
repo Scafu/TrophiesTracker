@@ -35,6 +35,10 @@ workflows:
       - name: Analyze project
         script: |
           flutter analyze
+
+      - name: Run tests
+        script: |
+          flutter test
       
       - name: Build APK
         script: |
