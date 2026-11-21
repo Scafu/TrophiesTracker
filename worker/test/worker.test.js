@@ -300,3 +300,76 @@ test("/rarity refuses a bad appid and reports a Steam failure as 502", async () 
   steam = () => new Response("down", { status: 500 });
   assert.equal((await call("/rarity?appid=1")).status, 502);
 });
+
+test("/category keeps the visible games with achievements, in Steam's order", async () => {
+  let requested;
+  const item = (appid, name, categories, visible = true) => ({
+    appid,
+    name,
+    visible,
+    categories: { feature_categoryids: categories },
+  });
+  steam = (url) => {
+    requested = url;
+    return Response.json({
+      response: {
+        store_items: [
+          item(1, "With trophies", [22, 2]),
+          item(2, "No trophies", [2]),
+          item(3, "Hidden", [22], false),
+          item(4, "", [22]),
+          item(5, "Also trophies", [22]),
+          { appid: 6, name: "No categories", visible: true },
+        ],
+      },
+    });
+  };
+
+  const response = await call("/category?tag=122");
+
+  assert.deepEqual(await response.json(), [
+    { appid: 1, name: "With trophies" },
+    { appid: 5, name: "Also trophies" },
+  ]);
+  assert.equal(response.headers.get("Cache-Control"), "max-age=3600");
+  const input = JSON.parse(new URL(requested).searchParams.get("input_json"));
+  assert.deepEqual(input.query.filters.tagids_must_match, [{ tagids: [122] }]);
+  assert.doesNotMatch(requested, /key=/);
+});
+
+test("/category returns at most 40 games", async () => {
+  steam = () =>
+    Response.json({
+      response: {
+        store_items: Array.from({ length: 100 }, (_, i) => ({
+          appid: i + 1,
+          name: `Game ${i + 1}`,
+          visible: true,
+          categories: { feature_categoryids: [22] },
+        })),
+      },
+    });
+
+  const games = await (await call("/category?tag=19")).json();
+
+  assert.equal(games.length, 40);
+  assert.equal(games[0].appid, 1);
+});
+
+test("/category refuses tags outside the list without asking Steam", async () => {
+  let asked = false;
+  steam = () => {
+    asked = true;
+    return Response.json({});
+  };
+
+  for (const path of ["/category", "/category?tag=abc", "/category?tag=3859", "/category?tag=19,21", "/category?tag="]) {
+    assert.equal((await call(path)).status, 400, path);
+  }
+  assert.equal(asked, false);
+});
+
+test("/category reports a Steam failure as 502", async () => {
+  steam = () => new Response("down", { status: 500 });
+  assert.equal((await call("/category?tag=9")).status, 502);
+});

@@ -1,3 +1,7 @@
+import { handlePsn } from "./psn.js";
+import { retryAfterSeconds } from "./limits.js";
+import { TTL, cacheStatus, shared } from "./cache.js";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const VERIFIER = /^[A-Za-z0-9_-]{43,128}$/;
@@ -6,6 +10,24 @@ const LANGUAGE = /^[a-z]{2,20}$/;
 const CLAIMED_ID = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/;
 const STEAM_OPENID = "https://steamcommunity.com/openid/login";
 const STORE_ASSETS = "https://shared.akamai.steamstatic.com/store_item_assets/";
+// Generi che l'app mostra in Explore (id dei tag di Steam). Un elenco chiuso:
+// /category non deve diventare un modo per interrogare lo store con tag a caso.
+const CATEGORY_TAGS = new Set([
+  "19", // Action
+  "21", // Adventure
+  "122", // RPG
+  "1774", // Shooter
+  "29482", // Souls-like
+  "1695", // Open World
+  "9", // Strategy
+  "599", // Simulation
+  "1667", // Horror
+  "1664", // Puzzle
+  "1625", // Platformer
+  "492", // Indie
+]);
+const STEAM_ACHIEVEMENTS_CATEGORY = 22;
+const CATEGORY_LIMIT = 40;
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 giorni
 const CODE_TTL = 60; // minimo consentito da KV
 
@@ -21,6 +43,19 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // Limite per client, prima di qualunque lavoro (vedi limits.js)
+    const retryAfter = await retryAfterSeconds(request, env, url);
+    if (retryAfter) {
+      return jsonResponse({ error: "rate_limited" }, 429, {
+        "Retry-After": String(retryAfter),
+      });
+    }
+
+    // PlayStation: logica a parte in psn.js (vedi i vincoli sui log in quel file)
+    if (url.pathname.startsWith("/psn/")) {
+      return handlePsn(request, url.pathname, jsonResponse);
     }
 
     // ==========================================
@@ -346,7 +381,8 @@ export default {
       }
 
       const apiUrl = `https://store.steampowered.com/api/appdetails?appids=${appid}`;
-      return relaySteam(await fetch(apiUrl));
+      const response = await fetch(apiUrl, shared(TTL.game));
+      return relaySteam(response, cacheStatus(response));
     }
 
     // ==========================================
@@ -365,7 +401,8 @@ export default {
       }
 
       const apiUrl = `https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${env.STEAM_API_KEY}&appid=${appid}&l=${lang}`;
-      return relaySteam(await fetch(apiUrl));
+      const response = await fetch(apiUrl, shared(TTL.achievements));
+      return relaySteam(response, cacheStatus(response));
     }
 
     // ==========================================
@@ -391,7 +428,8 @@ export default {
         data_request: { include_assets: true },
       };
       const response = await fetch(
-        `https://api.steampowered.com/IStoreBrowseService/GetItems/v1?input_json=${encodeURIComponent(JSON.stringify(input))}`
+        `https://api.steampowered.com/IStoreBrowseService/GetItems/v1?input_json=${encodeURIComponent(JSON.stringify(input))}`,
+        shared(TTL.covers)
       );
       const data = await readJson(response);
       if (!response.ok || data === null) {
@@ -408,7 +446,10 @@ export default {
         const library = asset("library_capsule_2x") ?? asset("library_capsule");
         if (library) covers[item.appid] = { library };
       }
-      return jsonResponse(covers, 200, { "Cache-Control": "max-age=86400" });
+      return jsonResponse(covers, 200, {
+        "Cache-Control": "max-age=86400",
+        ...cacheStatus(response),
+      });
     }
 
     // ==========================================
@@ -427,7 +468,8 @@ export default {
       }
 
       const response = await fetch(
-        `https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appid}`
+        `https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appid}`,
+        shared(TTL.rarity)
       );
       const data = await readJson(response);
       if (!response.ok || data === null) {
@@ -439,7 +481,63 @@ export default {
         const percent = Number(item.percent);
         if (item.name && Number.isFinite(percent)) rarity[item.name] = percent;
       }
-      return jsonResponse(rarity, 200, { "Cache-Control": "max-age=86400" });
+      return jsonResponse(rarity, 200, {
+        "Cache-Control": "max-age=86400",
+        ...cacheStatus(response),
+      });
+    }
+
+    // ==========================================
+    // 8d. GIOCHI DI UNA CATEGORIA (pubblico, no token)
+    // ==========================================
+
+    /**
+     * I giochi di un genere (`?tag=`, uno di CATEGORY_TAGS) in ordine di
+     * popolarità, come `[{ appid, name }]`. Si tengono solo quelli con
+     * achievement, perché l'app serve a seguirli, e al massimo CATEGORY_LIMIT.
+     * Lo store di Steam non richiede la chiave API.
+     */
+    if (url.pathname === "/category") {
+      const tag = url.searchParams.get("tag");
+      if (!CATEGORY_TAGS.has(tag)) {
+        return jsonResponse({ error: "tag non valido" }, 400);
+      }
+
+      const input = {
+        context: { language: "english", country_code: "US", steam_realm: 1 },
+        query: {
+          start: 0,
+          count: 100,
+          sort: 11,
+          filters: {
+            tagids_must_match: [{ tagids: [Number(tag)] }],
+            type_filters: { include_games: true },
+          },
+        },
+        data_request: {},
+      };
+      const response = await fetch(
+        `https://api.steampowered.com/IStoreQueryService/Query/v1/?input_json=${encodeURIComponent(JSON.stringify(input))}`,
+        shared(TTL.category)
+      );
+      const data = await readJson(response);
+      if (!response.ok || data === null) {
+        return jsonResponse({ error: "Risposta non valida da Steam" }, 502);
+      }
+
+      const games = [];
+      for (const item of data.response?.store_items ?? []) {
+        const hasAchievements = item.categories?.feature_categoryids?.includes(
+          STEAM_ACHIEVEMENTS_CATEGORY
+        );
+        if (item.visible && item.name && hasAchievements) {
+          games.push({ appid: item.appid, name: item.name });
+        }
+      }
+      return jsonResponse(games.slice(0, CATEGORY_LIMIT), 200, {
+        "Cache-Control": "max-age=3600",
+        ...cacheStatus(response),
+      });
     }
 
     // ==========================================
@@ -455,8 +553,10 @@ export default {
       try {
         const apiUrl = `https://api.steampowered.com/IStoreService/GetAppList/v1/?key=${env.STEAM_API_KEY}&include_games=true&include_dlc=false&include_software=false&include_videos=false&include_hardware=false&last_appid=${lastAppId}`;
 
-        return await relaySteam(await fetch(apiUrl), {
+        const response = await fetch(apiUrl, shared(TTL.catalog));
+        return await relaySteam(response, {
           "Cache-Control": "max-age=86400",
+          ...cacheStatus(response),
         });
       } catch {
         return jsonResponse({ error: "Failed to fetch applist from Steam" }, 500);

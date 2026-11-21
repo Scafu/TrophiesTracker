@@ -5,6 +5,17 @@
   "kv_namespaces": [
     { "binding": "KV", "id": "fe959c0d3b1a4fc8b3256f2c1d902313" }
   ],
+  // Limite per client, per gruppo di rotte (src/limits.js, docs/features/rate-limiting.md).
+  // `period` può essere solo 10 o 60 secondi; `namespace_id` è unico nell'account.
+  // Sono valori di sicurezza sopra l'uso vero: non abbassarli senza controllare
+  // quante richieste fa una sincronizzazione.
+  "ratelimits": [
+    { "name": "RL_IDENTITY", "namespace_id": "8101", "simple": { "limit": 20, "period": 60 } },
+    { "name": "RL_USER", "namespace_id": "8102", "simple": { "limit": 30, "period": 60 } },
+    { "name": "RL_GAME", "namespace_id": "8103", "simple": { "limit": 2000, "period": 60 } },
+    { "name": "RL_LIGHT", "namespace_id": "8104", "simple": { "limit": 120, "period": 60 } },
+    { "name": "RL_PSN", "namespace_id": "8105", "simple": { "limit": 600, "period": 60 } }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
@@ -12,7 +23,8 @@
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
-      "invocation_logs": true,
+      // niente log delle invocazioni: conterrebbero percorsi, intestazioni e IP degli utenti
+      "invocation_logs": false,
       "persist": true
     }
   }
