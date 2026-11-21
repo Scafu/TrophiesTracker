@@ -19,7 +19,7 @@ flutter run --dart-define=PROXY_URL=http://127.0.0.1:8787   # app against a loca
 
 - Generated files (`*.g.dart`, `*.freezed.dart`) are **committed**. After editing a drift table, a `@freezed` class or a `@JsonSerializable` model, re-run `build_runner` and commit the output.
 - All tests pass (`flutter test`; the failing counter template `widget_test.dart` was deleted, REVIEW.md B2). Examples of the style: `test/game_remote_data_source_test.dart` (`MockClient`) and `test/app_database_test.dart` (in-memory Drift); run one by path.
-- CI is Codemagic ([codemagic.yaml](codemagic.yaml)): every push to `main` analyzes, runs `flutter test`, builds APK/AAB/iOS, then tags `v<pubspec version>` and publishes a GitHub release (deleting and recreating the tag if it already exists). Bump `version:` in `pubspec.yaml` to cut a new release (the Settings page reads the version from the build with `package_info_plus`, it is not written anywhere else).
+- CI is Codemagic ([codemagic.yaml](codemagic.yaml)), with Flutter pinned to the version in use (`flutter: 3.47.7`; raise it together with the local fvm version, the packages need at least 3.47): every push to `main` analyzes, runs `flutter test`, builds APK/AAB/iOS, then tags `v<pubspec version>` and publishes a GitHub release (deleting and recreating the tag if it already exists). Bump `version:` in `pubspec.yaml` to cut a new release (the Settings page reads the version from the build with `package_info_plus`, it is not written anywhere else).
 
 ## Branches and releases
 

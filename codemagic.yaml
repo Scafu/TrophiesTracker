@@ -11,7 +11,9 @@ workflows:
     name: Trophies Tracker
     max_build_duration: 60
     environment:
-      flutter: stable
+      # The packages need Flutter 3.47 or newer (flutter_web_auth_2 6.0): pinned to
+      # the version the app is built and tested with, not to "stable".
+      flutter: 3.47.7
       xcode: latest
       cocoapods: default
       android_signing:
@@ -167,7 +169,9 @@ workflows:
     name: Checks (develop and pull requests)
     max_build_duration: 30
     environment:
-      flutter: stable
+      # The packages need Flutter 3.47 or newer (flutter_web_auth_2 6.0): pinned to
+      # the version the app is built and tested with, not to "stable".
+      flutter: 3.47.7
 
     triggering:
       events:
