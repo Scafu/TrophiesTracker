@@ -6,6 +6,7 @@ import 'package:trophies_tracker/core/router/app_router.dart';
 import 'package:trophies_tracker/core/theme/themes.dart';
 import 'package:trophies_tracker/features/account/presentation/cubit/account_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
+import 'package:trophies_tracker/features/psn/presentation/cubit/psn_cubit.dart';
 import 'package:trophies_tracker/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:trophies_tracker/features/settings/presentation/cubit/settings_state.dart';
 
@@ -36,6 +37,10 @@ class _MainAppState extends State<MainApp> {
 
         /// Global Bloc for app settings (Theme, Language).
         BlocProvider(create: (_) => di.sl<SettingsCubit>()),
+
+        /// Global Bloc for the PlayStation account, so a sync goes on while the
+        /// user moves between pages.
+        BlocProvider(create: (_) => di.sl<PsnCubit>()..load()),
       ],
       child: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, state) {

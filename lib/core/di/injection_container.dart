@@ -20,6 +20,13 @@ import 'package:trophies_tracker/features/game/presentation/details/cubit/game_d
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/category_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/exploregames/cubit/explore_cubit.dart';
 import 'package:trophies_tracker/features/game/presentation/gamelibrary/cubit/game_cubit.dart';
+import 'package:trophies_tracker/features/psn/data/psn_local_data_source.dart';
+import 'package:trophies_tracker/features/psn/data/psn_remote_data_source.dart';
+import 'package:trophies_tracker/features/psn/data/psn_repository_impl.dart';
+import 'package:trophies_tracker/features/psn/data/web_authenticate.dart';
+import 'package:trophies_tracker/features/psn/domain/psn_repository.dart';
+import 'package:trophies_tracker/features/psn/presentation/cubit/psn_cubit.dart';
+import 'package:trophies_tracker/features/psn/presentation/psn_login_probe.dart';
 import 'package:trophies_tracker/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:trophies_tracker/features/settings/domain/repositories/settings_repository.dart';
 import 'package:trophies_tracker/features/settings/presentation/cubit/settings_cubit.dart';
@@ -99,6 +106,23 @@ Future<void> init() async {
   sl.registerFactory(() => CategoryCubit(sl()));
 
   sl.registerFactory(() => StatsCubit(sl()));
+
+  // PlayStation
+  sl.registerLazySingleton<PsnRemoteDataSource>(
+    () => PsnRemoteDataSourceImpl(client: sl(), proxyBaseUrl: _proxyBaseUrl),
+  );
+
+  sl.registerLazySingleton<PsnLocalDataSource>(
+    () => PsnLocalDataSourceImpl(sharedPreferences: sl(), secureStorage: sl()),
+  );
+
+  sl.registerLazySingleton<PsnRepository>(
+    () => PsnRepositoryImpl(remote: sl(), local: sl(), games: sl()),
+  );
+
+  sl.registerFactory(() => PsnCubit(sl(), systemBrowserAuthenticate));
+
+  sl.registerFactory(() => PsnLoginProbe(sl(), systemBrowserAuthenticate));
 
   sl.registerFactory(() => GameDetailsCubit(sl(), sl(), sl()));
 

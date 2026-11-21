@@ -67,7 +67,7 @@ class AccountCubit extends Cubit<AccountState> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!isClosed) {
-        emit(const AccountState.error('Could not launch Steam login.'));
+        emit(const AccountState.error('Could not open Steam to link your account.'));
       }
     }
   }
@@ -113,7 +113,7 @@ class AccountCubit extends Cubit<AccountState> {
       if (!isClosed) {
         emit(
           const AccountState.error(
-            'Could not complete the Steam login. Please try again.',
+            'Could not link your Steam account. Please try again.',
           ),
         );
       }
